@@ -37,6 +37,49 @@ const FINNHUB_STOCK_FALLBACKS: Record<string, string[]> = {
   "399001.SZ": ["MCHI"],
 };
 
+const YAHOO_SYMBOLS: Record<string, string> = {
+  "OANDA:EUR_USD": "EURUSD=X",
+  "OANDA:AUD_USD": "AUDUSD=X",
+  "OANDA:NZD_USD": "NZDUSD=X",
+  "OANDA:GBP_USD": "GBPUSD=X",
+  "OANDA:USD_JPY": "JPY=X",
+  "DX-Y.NYB": "DX-Y.NYB",
+  "^GSPC": "^GSPC",
+  "^IXIC": "^IXIC",
+  "^DJI": "^DJI",
+  "399001.SZ": "399001.SZ",
+  "^STI": "^STI",
+  "^HSI": "^HSI",
+  "^GDAXI": "^GDAXI",
+  "^TNX": "^TNX",
+  "^AXJO": "^AXJO",
+  "^NZ50": "^NZ50",
+  "^VIX": "^VIX",
+  "GC=F": "GC=F",
+  "SI=F": "SI=F",
+  "HG=F": "HG=F",
+  "CL=F": "CL=F",
+  "NST.AX": "NST.AX",
+};
+
+const YAHOO_FALLBACKS: Record<string, string[]> = {
+  "^GSPC": ["SPY"],
+  "^IXIC": ["QQQ"],
+  "^DJI": ["DIA"],
+  "^TNX": ["IEF"],
+  "^AXJO": ["EWA"],
+  "^NZ50": ["ENZL"],
+  "^HSI": ["FXI"],
+  "^GDAXI": ["EWG"],
+  "^STI": ["EWS"],
+  "399001.SZ": ["MCHI"],
+  "GC=F": ["GLD"],
+  "SI=F": ["SLV"],
+  "HG=F": ["CPER"],
+  "CL=F": ["USO"],
+  "DX-Y.NYB": ["UUP"],
+};
+
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {
     const res = await fetch(url);
@@ -51,6 +94,19 @@ type FinnhubCandle = {
   c: number[];
   t: number[];
   s?: string;
+};
+
+type YahooChartResponse = {
+  chart?: {
+    result?: Array<{
+      timestamp?: number[];
+      indicators?: {
+        quote?: Array<{
+          close?: Array<number | null>;
+        }>;
+      };
+    }>;
+  };
 };
 
 function normalizeFinnhubHistory(data: FinnhubCandle | null): HistoryPoint[] | null {
@@ -69,7 +125,7 @@ function normalizeFinnhubHistory(data: FinnhubCandle | null): HistoryPoint[] | n
 
 async function finnhubStockCandles(symbol: string): Promise<HistoryPoint[] | null> {
   const now = Math.floor(Date.now() / 1000);
-  const from = now - 120 * 24 * 3600;
+  const from = now - 3650 * 24 * 3600;
   const url = isDev
     ? `/api/finnhub/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}&token=${FINNHUB_KEY}`
     : `/api/finnhub-candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}`;
@@ -80,7 +136,7 @@ async function finnhubStockCandles(symbol: string): Promise<HistoryPoint[] | nul
 
 async function finnhubForexCandles(symbol: string): Promise<HistoryPoint[] | null> {
   const now = Math.floor(Date.now() / 1000);
-  const from = now - 120 * 24 * 3600;
+  const from = now - 3650 * 24 * 3600;
   const url = isDev
     ? `/api/finnhub/forex/candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}&token=${FINNHUB_KEY}`
     : `/api/finnhub-forex-candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}`;
@@ -102,6 +158,46 @@ async function finnhubHistoryForSymbol(symbol: string): Promise<HistoryPoint[] |
   return null;
 }
 
+function yahooCandidates(symbol: string): string[] {
+  const primary = YAHOO_SYMBOLS[symbol] ?? symbol;
+  const fallbacks = YAHOO_FALLBACKS[primary] ?? YAHOO_FALLBACKS[symbol] ?? [];
+  return [primary, ...fallbacks];
+}
+
+async function yahooChart(symbol: string): Promise<HistoryPoint[] | null> {
+  const url = `/api/yahoo-chart?symbol=${encodeURIComponent(symbol)}&range=10y&interval=1d`;
+  const data = await fetchJson<YahooChartResponse>(url);
+  const result = data?.chart?.result?.[0];
+  const timestamps = result?.timestamp;
+  const closes = result?.indicators?.quote?.[0]?.close;
+
+  if (!timestamps?.length || !closes?.length) return null;
+
+  const history = timestamps
+    .map((seconds, index) => {
+      const value = closes[index];
+      if (value === null || value === undefined || !Number.isFinite(value)) {
+        return null;
+      }
+
+      return {
+        date: new Date(seconds * 1000).toISOString().slice(0, 10),
+        value,
+      };
+    })
+    .filter((point): point is HistoryPoint => Boolean(point));
+
+  return history.length >= MIN_CLOSES ? history : null;
+}
+
+async function yahooHistoryForSymbol(symbol: string): Promise<HistoryPoint[] | null> {
+  for (const candidate of yahooCandidates(symbol)) {
+    const history = await yahooChart(candidate);
+    if (history && history.length >= MIN_CLOSES) return history;
+  }
+  return null;
+}
+
 async function finnhubQuote(symbol: string): Promise<{ c: number; dp: number } | null> {
   const url = isDev
     ? `/api/finnhub/quote?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_KEY}`
@@ -112,8 +208,8 @@ async function finnhubQuote(symbol: string): Promise<{ c: number; dp: number } |
 
 async function fredSeries(seriesId: string): Promise<HistoryPoint[] | null> {
   const url = isDev
-    ? `/api/fred/series/observations?series_id=${seriesId}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=120`
-    : `/api/fred-observations?series_id=${seriesId}&limit=120`;
+    ? `/api/fred/series/observations?series_id=${seriesId}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=1300`
+    : `/api/fred-observations?series_id=${seriesId}&limit=1300`;
   if (isDev && !FRED_KEY) return null;
   const data = await fetchJson<{
     observations: { date: string; value: string }[];
@@ -130,7 +226,7 @@ async function fredSeries(seriesId: string): Promise<HistoryPoint[] | null> {
 }
 
 async function coingeckoHistory(id: string): Promise<HistoryPoint[] | null> {
-  const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=90`;
+  const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=3650`;
   const data = await fetchJson<{ prices: [number, number][] }>(url);
   if (!data?.prices?.length) return null;
   return data.prices.map((p) => ({
@@ -149,6 +245,9 @@ export async function fetchMetric(
   try {
     if (instrument.source === "finnhub" && instrument.finnhubSymbol) {
       history = await finnhubHistoryForSymbol(instrument.finnhubSymbol);
+      if (!history || history.length < MIN_CLOSES) {
+        history = await yahooHistoryForSymbol(instrument.finnhubSymbol);
+      }
       const q = await finnhubQuote(instrument.finnhubSymbol);
       if (q?.c) {
         price = q.c;

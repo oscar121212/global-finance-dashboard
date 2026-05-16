@@ -12,7 +12,7 @@ function seededRandom(seed: string): () => number {
   };
 }
 
-function syntheticCloses(seed: string, days = 90): number[] {
+function syntheticCloses(seed: string, days = 3650): number[] {
   const rand = seededRandom(seed);
   const closes: number[] = [];
   let price = 80 + rand() * 40;

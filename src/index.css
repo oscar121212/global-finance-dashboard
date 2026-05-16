@@ -552,6 +552,31 @@ button {
   background: var(--bg-card);
 }
 
+.chart-quote {
+  margin: 0 0 0.9rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(232, 197, 71, 0.22);
+  border-radius: 10px;
+  background: rgba(10, 14, 20, 0.45);
+}
+
+.chart-quote blockquote {
+  margin: 0;
+  color: var(--text);
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.chart-quote figcaption {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .detail-chart__header,
 .detail-chart__axis {
   display: flex;

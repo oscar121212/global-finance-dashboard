@@ -35,7 +35,7 @@ function weekKey(date: string): string {
 }
 
 function aggregate(points: HistoryPoint[], timeframe: Timeframe): HistoryPoint[] {
-  if (timeframe === "daily") return points;
+  if (timeframe === "daily") return points.slice(-100);
 
   const map = new Map<string, HistoryPoint>();
   for (const point of points) {
@@ -44,7 +44,7 @@ function aggregate(points: HistoryPoint[], timeframe: Timeframe): HistoryPoint[]
     map.set(key, point);
   }
 
-  return Array.from(map.values());
+  return Array.from(map.values()).slice(-100);
 }
 
 function historyFromValues(values?: number[]): HistoryPoint[] {
@@ -109,12 +109,21 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
   const firstDate = chartPoints[0]!.date;
   const midDate = chartPoints[Math.floor(chartPoints.length / 2)]!.date;
   const lastDate = chartPoints[chartPoints.length - 1]!.date;
+  const periodLabel =
+    timeframe === "daily" ? "daily periods" : timeframe === "weekly" ? "weekly periods" : "monthly periods";
 
   return (
     <div className="detail-chart" aria-label={`${title} line chart`}>
+      <figure className="chart-quote">
+        <blockquote>
+          “Daily is supposed to predict 8-20 days, weekly 8-20 weeks and monthly
+          8-20 months.”
+        </blockquote>
+        <figcaption>Druckenmiller timeframe guide</figcaption>
+      </figure>
       <div className="detail-chart__header">
         <span>
-          Recent history · <strong>{yAxisLabel}</strong>
+          Last {chartPoints.length} {periodLabel} · <strong>{yAxisLabel}</strong>
         </span>
         <strong className={change >= 0 ? "up" : "down"}>
           {change >= 0 ? "+" : ""}
