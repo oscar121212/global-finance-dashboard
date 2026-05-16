@@ -7,6 +7,155 @@ export type AppRoute =
   | { kind: "metric"; id: string }
   | { kind: "radar"; id: string };
 
+type MetricInterpretation = {
+  why: string;
+  up: string;
+  down: string;
+};
+
+const SPECIFIC_INTERPRETATIONS: Record<string, MetricInterpretation> = {
+  m1: {
+    why: "M1 is the narrowest money supply measure, so it captures the most liquid money available for spending or immediate use. It can move sharply when households, banks, or companies shift between cash-like balances and other assets.",
+    up: "Rising M1 usually means more immediately spendable money is available. That can support short-term demand and risk appetite, although very fast growth may also point to inflation pressure or emergency liquidity creation.",
+    down: "Falling M1 usually points to tighter immediate liquidity. For global finance that can mean less fuel for speculation, weaker demand, and more pressure on highly valued or highly leveraged assets.",
+  },
+  m2: {
+    why: "M2 is a broader liquidity gauge than M1 because it includes savings deposits and money-market style balances. Many macro investors watch it because broad money growth often lines up with major risk-asset cycles.",
+    up: "Rising M2 generally means easier liquidity. That tends to be supportive for equities, credit, commodities, crypto, and emerging markets if inflation and rates are not also rising too fast.",
+    down: "Falling or stagnant M2 usually means liquidity is being drained. That can pressure equity valuations, reduce speculative activity, and make refinancing harder for weaker borrowers.",
+  },
+  m3: {
+    why: "Official US M3 is discontinued, so this dashboard uses broad money as a practical proxy. The purpose is to capture whether the overall pool of money available to the economy is expanding or contracting.",
+    up: "Rising broad money usually means looser financial conditions and more cash available to circulate through markets and the economy.",
+    down: "Falling broad money usually means tighter conditions, less balance-sheet expansion, and a more difficult environment for speculative assets.",
+  },
+  "global-liq": {
+    why: "Global liquidity is hard to measure in one clean series, so the dashboard uses dollar strength as a proxy. A weaker dollar often behaves like easier global liquidity because offshore borrowers and commodity buyers face less pressure.",
+    up: "A rising score here means global conditions are becoming easier, often because the dollar is weakening or liquidity-sensitive assets are improving.",
+    down: "A falling score means global conditions are tightening. That can pressure commodities, emerging markets, global trade, and USD debt borrowers.",
+  },
+  dxy: {
+    why: "DXY measures US dollar strength against major currencies. The dollar is central to global funding, commodities, and cross-border debt, so a stronger dollar often tightens global financial conditions.",
+    up: "A rising DXY means the US dollar is strengthening. That can pressure gold, copper, oil, emerging markets, and companies or countries with US-dollar debt.",
+    down: "A falling DXY usually means easier global conditions. It often supports commodities, non-US equities, emerging markets, and risk appetite.",
+  },
+  gold: {
+    why: "Gold is called a safe-haven asset because investors often buy it when they are worried about currencies, banks, inflation, war, or market stress. It is real-rate sensitive because gold pays no yield, so it becomes more attractive when inflation-adjusted bond returns fall.",
+    up: "Rising gold can mean investors want protection from inflation, currency debasement, geopolitical risk, or falling real yields. For mining, it is usually positive for gold miners and exploration sentiment.",
+    down: "Falling gold can mean real yields are rising, the US dollar is strong, or investors prefer growth assets. For global finance it can signal less demand for monetary protection, although it may also reflect tighter liquidity.",
+  },
+  silver: {
+    why: "Silver is both a precious metal and an industrial metal. It can behave like gold during monetary stress, but it also responds to manufacturing, solar, and electronics demand.",
+    up: "Rising silver can signal stronger industrial demand, inflation hedging, or speculative appetite in precious metals. It often helps sentiment toward smaller mining and exploration names.",
+    down: "Falling silver can point to weaker industrial demand, a stronger dollar, rising real yields, or fading precious-metals speculation.",
+  },
+  copper: {
+    why: "Copper is widely treated as a global growth barometer because it is used in construction, power grids, manufacturing, transport, and electrification.",
+    up: "Rising copper usually points to stronger expectations for industrial demand, China activity, electrification spending, or supply tightness. It is generally positive for cyclicals and copper miners.",
+    down: "Falling copper often points to weaker global growth, softer China demand, or risk-off conditions. It can be negative for miners and cyclical equities.",
+  },
+  oil: {
+    why: "Oil is central to transport, energy costs, inflation, and geopolitics. It affects household spending, company margins, central-bank inflation risk, and producer-country revenues.",
+    up: "Rising oil can signal stronger demand or supply stress. It can help energy producers, but it may hurt consumers, raise inflation pressure, and keep central banks tighter.",
+    down: "Falling oil can ease inflation and help consumers, but sharp declines can also signal weak global demand or recession risk.",
+  },
+  vix: {
+    why: "VIX reflects expected volatility in the S&P 500 options market. It is often called the market's fear gauge because it tends to spike when investors rush to buy protection.",
+    up: "Rising VIX means fear and uncertainty are increasing. That is usually negative for risk assets and can signal stress in equities, credit, or liquidity.",
+    down: "Falling VIX means markets are calmer and investors are demanding less protection. That usually supports risk appetite, although very low VIX can also signal complacency.",
+  },
+  us10y: {
+    why: "The US 10-year yield is a benchmark discount rate for global markets. It influences equity valuations, mortgages, credit pricing, and the relative appeal of bonds versus stocks.",
+    up: "Rising yields usually mean tighter financial conditions. They can pressure long-duration equities, housing, credit, gold, and speculative assets.",
+    down: "Falling yields can ease financial conditions and support valuations, but if yields fall because growth fears are rising, the signal can be defensive rather than bullish.",
+  },
+  fed: {
+    why: "The Fed funds rate is the base price of US dollar money. Because the dollar is the global reserve currency, Fed policy affects liquidity, capital flows, exchange rates, and risk appetite worldwide.",
+    up: "A rising Fed rate means policy is tightening. That usually slows credit growth, supports the dollar, and pressures risk assets over time.",
+    down: "A falling Fed rate means policy is easing. That can support liquidity and risk assets, although cuts during a crisis may also signal economic stress.",
+  },
+  btc: {
+    why: "Bitcoin is a high-beta liquidity asset and a speculative store-of-value narrative. It often reacts quickly when global liquidity and risk appetite improve or deteriorate.",
+    up: "Rising Bitcoin usually signals stronger speculative appetite and easier liquidity conditions. It can also reflect demand for alternatives to fiat currencies.",
+    down: "Falling Bitcoin usually signals risk-off behavior, tighter liquidity, or fading speculative demand.",
+  },
+  eth: {
+    why: "Ethereum reflects crypto liquidity, smart-contract activity, and appetite for higher-beta digital assets. It is more tied to network usage and risk sentiment than Bitcoin.",
+    up: "Rising Ethereum usually means stronger crypto risk appetite, better liquidity, or improving expectations for blockchain activity.",
+    down: "Falling Ethereum usually means weaker speculative appetite, tighter liquidity, or reduced confidence in crypto growth.",
+  },
+  sol: {
+    why: "Solana is a high-beta crypto asset, so it often amplifies changes in speculative appetite. It can move faster than Bitcoin or Ethereum in risk-on and risk-off phases.",
+    up: "Rising Solana usually points to strong speculative demand and risk-on behavior in digital assets.",
+    down: "Falling Solana usually points to risk aversion or liquidity leaving the most speculative parts of crypto.",
+  },
+};
+
+const CATEGORY_INTERPRETATIONS: Record<string, MetricInterpretation> = {
+  liquidity: {
+    why: "Liquidity indicators matter because markets usually perform better when money and credit are expanding. They help show whether the system has enough cash to support spending, lending, and speculation.",
+    up: "If this rises, financial conditions are generally getting easier and risk assets may have more support.",
+    down: "If this falls, financial conditions are generally tightening and markets may become more fragile.",
+  },
+  indices: {
+    why: "Equity indices summarize broad investor risk appetite and earnings expectations. Trend strength helps show whether capital is flowing into or out of major markets.",
+    up: "If this rises, investors are generally more confident about growth, profits, and liquidity.",
+    down: "If this falls, investors are reducing risk or pricing weaker growth, tighter policy, or lower profits.",
+  },
+  fx: {
+    why: "Currency pairs show relative strength between economies and central-bank policies. They also affect trade, commodity pricing, and capital flows.",
+    up: "If this pair rises, the first currency is strengthening against the second. The macro meaning depends on the pair, but it usually reflects relative growth, rates, or risk sentiment.",
+    down: "If this pair falls, the first currency is weakening against the second, often due to lower relative rates, weaker growth, or reduced investor demand.",
+  },
+  bonds: {
+    why: "Bond yields are a core financial-conditions input because they set the discount rate for assets and the borrowing cost for households, governments, and companies.",
+    up: "If yields rise, money is usually becoming more expensive. That can pressure equities, housing, credit, and long-duration assets.",
+    down: "If yields fall, money is usually becoming cheaper, which can support valuations. But sharp falls can also mean investors fear recession.",
+  },
+  volatility: {
+    why: "Volatility and dollar indicators reveal stress, hedging demand, and whether investors are comfortable taking risk.",
+    up: "If this rises, it can mean stress or tighter conditions, especially for VIX or DXY.",
+    down: "If this falls, it can mean calmer markets or easier global conditions, depending on the indicator.",
+  },
+  commodities: {
+    why: "Commodities connect financial markets to real-world demand, inflation, supply shocks, and mining sector profitability.",
+    up: "If this rises, it can signal stronger demand, supply shortages, inflation pressure, or better producer margins.",
+    down: "If this falls, it can signal weaker demand, lower inflation pressure, or stress in cyclical sectors.",
+  },
+  tech: {
+    why: "Large technology companies dominate major indices and are sensitive to liquidity, rates, growth expectations, and investor risk appetite.",
+    up: "If this rises, it usually means investors are rewarding growth, AI/platform leadership, or easier financial conditions.",
+    down: "If this falls, it can mean tighter rates, weaker growth expectations, or rotation away from high-valuation leaders.",
+  },
+  mining: {
+    why: "Mining companies translate commodity prices into equity-market performance. They are useful for reading resource-sector risk appetite and global growth expectations.",
+    up: "If this rises, investors are usually pricing stronger commodity demand, better margins, or improved mining-sector sentiment.",
+    down: "If this falls, investors may be pricing weaker commodities, rising costs, political risk, or slower global growth.",
+  },
+  crypto: {
+    why: "Crypto assets are high-beta liquidity gauges. They often respond quickly to changes in speculative appetite, dollar liquidity, and risk-taking.",
+    up: "If this rises, risk appetite and speculative liquidity are usually improving.",
+    down: "If this falls, liquidity may be tightening or investors may be moving away from speculative assets.",
+  },
+  rates: {
+    why: "Policy rates are central-bank settings that influence borrowing costs, currencies, inflation, and risk appetite.",
+    up: "If policy rates rise, central banks are tightening. That can cool inflation but usually pressures credit growth and asset valuations.",
+    down: "If policy rates fall, central banks are easing. That can support markets, although cuts can also happen because growth is deteriorating.",
+  },
+};
+
+function getMetricInterpretation(metric: MetricResult): MetricInterpretation {
+  return (
+    SPECIFIC_INTERPRETATIONS[metric.instrument.id] ??
+    CATEGORY_INTERPRETATIONS[metric.instrument.category] ??
+    {
+      why: "This indicator is included because it helps describe one part of global financial conditions.",
+      up: "If it rises, the implication depends on the asset, but it usually shows stronger demand or investor interest.",
+      down: "If it falls, the implication depends on the asset, but it usually shows weaker demand or reduced investor interest.",
+    }
+  );
+}
+
 function findMetric(categories: CategorySummary[], id: string): MetricResult | undefined {
   for (const category of categories) {
     const metric = category.metrics.find((m) => m.instrument.id === id);
@@ -29,6 +178,8 @@ function formatLevel(value?: number): string {
 }
 
 function MetricDetail({ metric }: { metric: MetricResult }) {
+  const interpretation = getMetricInterpretation(metric);
+
   return (
     <main className="detail-page">
       <a className="back-link" href="#">
@@ -52,6 +203,18 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
         <article className="detail-panel">
           <h2>What It Means</h2>
           <p>{metric.instrument.explanation}</p>
+          <div className="meaning-block">
+            <h3>Why this answer</h3>
+            <p>{interpretation.why}</p>
+          </div>
+          <div className="meaning-block">
+            <h3>If it rises</h3>
+            <p>{interpretation.up}</p>
+          </div>
+          <div className="meaning-block">
+            <h3>If it falls</h3>
+            <p>{interpretation.down}</p>
+          </div>
           <p>
             Current level: <strong>{formatLevel(metric.price)}</strong>
             {metric.changePct !== undefined && (
