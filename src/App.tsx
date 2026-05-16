@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import CategorySection from "./components/CategorySection";
+import MacroRadar from "./components/MacroRadar";
 import { loadDashboard } from "./lib/dashboard";
 import { hasLiveKeys } from "./lib/marketData";
 import type { DashboardState } from "./types";
@@ -99,6 +100,8 @@ export default function App() {
           preview the full dashboard.
         </div>
       )}
+
+      <MacroRadar categories={state.categories} />
 
       {state.categories.map((cat) => (
         <CategorySection key={cat.id} category={cat} />

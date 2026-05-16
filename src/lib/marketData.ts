@@ -13,6 +13,30 @@ const FRED_KEY =
 
 const isDev = import.meta.env.DEV;
 
+/** Min closing prices for TA (RSI14 ~ needs 15; SMA20 needs 20) */
+const MIN_CLOSES = 20;
+
+/**
+ * When Finnhub stock/candle returns empty (common on free tier for ^ indices / futures),
+ * try liquid ETF / proxy symbols.
+ */
+const FINNHUB_STOCK_FALLBACKS: Record<string, string[]> = {
+  "^GSPC": ["SPY", "IVV"],
+  "^IXIC": ["QQQ"],
+  "^DJI": ["DIA"],
+  "^TNX": ["IEF"],
+  "GC=F": ["GLD"],
+  "SI=F": ["SLV"],
+  "HG=F": ["CPER"],
+  "CL=F": ["USO"],
+  "^HSI": ["FXI"],
+  "^GDAXI": ["EWG"],
+  "^STI": ["EWS"],
+  "^NZ50": ["ENZL"],
+  "^AXJO": ["EWA"],
+  "399001.SZ": ["MCHI"],
+};
+
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {
     const res = await fetch(url);
@@ -26,9 +50,15 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 type FinnhubCandle = {
   c: number[];
   t: number[];
+  s?: string;
 };
 
-async function finnhubCandles(symbol: string): Promise<number[] | null> {
+function normalizeFinnhubCloses(data: FinnhubCandle | null): number[] | null {
+  if (!data?.c?.length || data.s === "no_data") return null;
+  return data.c;
+}
+
+async function finnhubStockCandles(symbol: string): Promise<number[] | null> {
   const now = Math.floor(Date.now() / 1000);
   const from = now - 120 * 24 * 3600;
   const url = isDev
@@ -36,8 +66,31 @@ async function finnhubCandles(symbol: string): Promise<number[] | null> {
     : `/api/finnhub-candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}`;
   if (isDev && !FINNHUB_KEY) return null;
   const data = await fetchJson<FinnhubCandle>(url);
-  if (!data?.c?.length) return null;
-  return data.c;
+  return normalizeFinnhubCloses(data);
+}
+
+async function finnhubForexCandles(symbol: string): Promise<number[] | null> {
+  const now = Math.floor(Date.now() / 1000);
+  const from = now - 120 * 24 * 3600;
+  const url = isDev
+    ? `/api/finnhub/forex/candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}&token=${FINNHUB_KEY}`
+    : `/api/finnhub-forex-candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}`;
+  if (isDev && !FINNHUB_KEY) return null;
+  const data = await fetchJson<FinnhubCandle>(url);
+  return normalizeFinnhubCloses(data);
+}
+
+async function finnhubClosesForSymbol(symbol: string): Promise<number[] | null> {
+  if (symbol.startsWith("OANDA:")) {
+    return finnhubForexCandles(symbol);
+  }
+  const fallbacks = FINNHUB_STOCK_FALLBACKS[symbol] ?? [];
+  const chain = [symbol, ...fallbacks];
+  for (const sym of chain) {
+    const c = await finnhubStockCandles(sym);
+    if (c && c.length >= MIN_CLOSES) return c;
+  }
+  return null;
 }
 
 async function finnhubQuote(symbol: string): Promise<{ c: number; dp: number } | null> {
@@ -61,7 +114,7 @@ async function fredSeries(seriesId: string): Promise<number[] | null> {
     .map((o) => parseFloat(o.value))
     .filter((v) => !Number.isNaN(v))
     .reverse();
-  return vals.length >= 30 ? vals : null;
+  return vals.length >= MIN_CLOSES ? vals : null;
 }
 
 async function coingeckoHistory(id: string): Promise<number[] | null> {
@@ -80,9 +133,9 @@ export async function fetchMetric(
 
   try {
     if (instrument.source === "finnhub" && instrument.finnhubSymbol) {
-      closes = await finnhubCandles(instrument.finnhubSymbol);
+      closes = await finnhubClosesForSymbol(instrument.finnhubSymbol);
       const q = await finnhubQuote(instrument.finnhubSymbol);
-      if (q) {
+      if (q?.c) {
         price = q.c;
         changePct = q.dp;
       }
@@ -105,7 +158,7 @@ export async function fetchMetric(
     /* fall through to demo */
   }
 
-  if (!closes || closes.length < 30) {
+  if (!closes || closes.length < MIN_CLOSES) {
     return buildDemoMetric(instrument);
   }
 

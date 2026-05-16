@@ -465,7 +465,7 @@ export const INSTRUMENTS: InstrumentConfig[] = [
     symbol: "RBATARGET",
     category: "rates",
     source: "fred",
-    fredSeriesId: "RBATCTR",
+    fredSeriesId: "RBACTR",
     explanation: "RBA policy rate influences AUD, mortgages, and bank stocks.",
   },
   {
@@ -474,7 +474,7 @@ export const INSTRUMENTS: InstrumentConfig[] = [
     symbol: "NZOCR",
     category: "rates",
     source: "fred",
-    fredSeriesId: "NZLTLT01NZM156N",
+    fredSeriesId: "INTGSTNZL",
     explanation: "RBNZ official cash rate path affects NZD and domestic lending.",
   },
   {

@@ -315,3 +315,117 @@ button {
   color: var(--gold-light);
   font-size: 0.8rem;
 }
+
+.macro-radar {
+  margin-bottom: 2.5rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(232, 197, 71, 0.28);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(201, 162, 39, 0.16), transparent 34rem),
+    var(--bg-panel);
+}
+
+.macro-radar__intro {
+  max-width: 58rem;
+  margin-bottom: 1rem;
+}
+
+.macro-radar__eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--gold-light);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.macro-radar h2 {
+  margin: 0 0 0.45rem;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+}
+
+.macro-radar__intro p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.macro-radar__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.9rem;
+}
+
+.macro-radar__card {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(26, 36, 51, 0.78);
+}
+
+.macro-radar__card.strong {
+  border-color: rgba(61, 214, 140, 0.42);
+}
+
+.macro-radar__card.weak {
+  border-color: rgba(240, 113, 120, 0.42);
+}
+
+.macro-radar__score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  border-radius: 10px;
+  background: rgba(10, 14, 20, 0.55);
+  border: 1px solid rgba(232, 197, 71, 0.22);
+}
+
+.macro-radar__score span {
+  color: var(--gold-light);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.macro-radar__score small {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.macro-radar__card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.macro-radar__card p {
+  margin: 0 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.macro-radar__focus,
+.macro-radar__demo-note {
+  display: block;
+  font-size: 0.76rem;
+}
+
+.macro-radar__focus {
+  color: var(--gold-light);
+  font-weight: 600;
+}
+
+.macro-radar__demo-note {
+  margin-top: 0.35rem;
+  color: var(--muted);
+}
