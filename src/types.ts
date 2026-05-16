@@ -32,12 +32,18 @@ export interface TechnicalSignals {
   summary: string;
 }
 
+export interface HistoryPoint {
+  date: string;
+  value: number;
+}
+
 export interface MetricResult {
   instrument: InstrumentConfig;
   score: number;
   price?: number;
   changePct?: number;
   closes?: number[];
+  history?: HistoryPoint[];
   technical: TechnicalSignals;
   narrative: string;
   updatedAt: string;

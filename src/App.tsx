@@ -15,6 +15,7 @@ function scoreClass(score: number): string {
 function parseRoute(): AppRoute {
   const hash = window.location.hash.replace(/^#\/?/, "");
   const [kind, id] = hash.split("/");
+  if (kind === "score") return { kind: "score" };
   if (kind === "metric" && id) return { kind: "metric", id };
   if (kind === "radar" && id) return { kind: "radar", id };
   return { kind: "home" };
@@ -90,12 +91,17 @@ export default function App() {
           </p>
         </div>
         <div className="header-actions">
-          <div className={`global-score ${scoreClass(state.globalScore)}`}>
+          <a
+            className={`global-score ${scoreClass(state.globalScore)}`}
+            href="#/score"
+            title="View bullish and bearish score breakdown"
+          >
             <span className="label">Global score</span>
             <span className={`value ${scoreClass(state.globalScore)}`}>
               {state.globalScore}
             </span>
-          </div>
+            <span className="score-hint">View leaders</span>
+          </a>
           <button
             type="button"
             className="btn"

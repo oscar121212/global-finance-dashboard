@@ -1,4 +1,4 @@
-import type { InstrumentConfig } from "../types";
+import type { HistoryPoint, InstrumentConfig } from "../types";
 import { analyzeTechnicals, buildNarrative, scoreFromTechnicals } from "./technicalAnalysis";
 import type { MetricResult } from "../types";
 
@@ -23,8 +23,21 @@ function syntheticCloses(seed: string, days = 90): number[] {
   return closes;
 }
 
+function historyFromCloses(closes: number[]): HistoryPoint[] {
+  const today = new Date();
+  return closes.map((value, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (closes.length - 1 - index));
+    return {
+      date: date.toISOString().slice(0, 10),
+      value,
+    };
+  });
+}
+
 export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
   const closes = syntheticCloses(instrument.id);
+  const history = historyFromCloses(closes);
   const isVix = instrument.id === "vix";
   const isYield =
     instrument.category === "bonds" || instrument.category === "rates";
@@ -49,6 +62,7 @@ export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
     price,
     changePct,
     closes,
+    history,
     technical,
     narrative: buildNarrative(instrument.name, score, technical, changePct),
     updatedAt: new Date().toISOString(),

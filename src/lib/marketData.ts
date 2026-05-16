@@ -1,4 +1,4 @@
-import type { InstrumentConfig, MetricResult } from "../types";
+import type { HistoryPoint, InstrumentConfig, MetricResult } from "../types";
 import { buildDemoMetric } from "./demoData";
 import {
   analyzeTechnicals,
@@ -53,12 +53,21 @@ type FinnhubCandle = {
   s?: string;
 };
 
-function normalizeFinnhubCloses(data: FinnhubCandle | null): number[] | null {
+function normalizeFinnhubHistory(data: FinnhubCandle | null): HistoryPoint[] | null {
   if (!data?.c?.length || data.s === "no_data") return null;
-  return data.c;
+  return data.c
+    .map((value, index) => {
+      const seconds = data.t[index];
+      if (!seconds || !Number.isFinite(value)) return null;
+      return {
+        date: new Date(seconds * 1000).toISOString().slice(0, 10),
+        value,
+      };
+    })
+    .filter((point): point is HistoryPoint => Boolean(point));
 }
 
-async function finnhubStockCandles(symbol: string): Promise<number[] | null> {
+async function finnhubStockCandles(symbol: string): Promise<HistoryPoint[] | null> {
   const now = Math.floor(Date.now() / 1000);
   const from = now - 120 * 24 * 3600;
   const url = isDev
@@ -66,10 +75,10 @@ async function finnhubStockCandles(symbol: string): Promise<number[] | null> {
     : `/api/finnhub-candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}`;
   if (isDev && !FINNHUB_KEY) return null;
   const data = await fetchJson<FinnhubCandle>(url);
-  return normalizeFinnhubCloses(data);
+  return normalizeFinnhubHistory(data);
 }
 
-async function finnhubForexCandles(symbol: string): Promise<number[] | null> {
+async function finnhubForexCandles(symbol: string): Promise<HistoryPoint[] | null> {
   const now = Math.floor(Date.now() / 1000);
   const from = now - 120 * 24 * 3600;
   const url = isDev
@@ -77,18 +86,18 @@ async function finnhubForexCandles(symbol: string): Promise<number[] | null> {
     : `/api/finnhub-forex-candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${now}`;
   if (isDev && !FINNHUB_KEY) return null;
   const data = await fetchJson<FinnhubCandle>(url);
-  return normalizeFinnhubCloses(data);
+  return normalizeFinnhubHistory(data);
 }
 
-async function finnhubClosesForSymbol(symbol: string): Promise<number[] | null> {
+async function finnhubHistoryForSymbol(symbol: string): Promise<HistoryPoint[] | null> {
   if (symbol.startsWith("OANDA:")) {
     return finnhubForexCandles(symbol);
   }
   const fallbacks = FINNHUB_STOCK_FALLBACKS[symbol] ?? [];
   const chain = [symbol, ...fallbacks];
   for (const sym of chain) {
-    const c = await finnhubStockCandles(sym);
-    if (c && c.length >= MIN_CLOSES) return c;
+    const history = await finnhubStockCandles(sym);
+    if (history && history.length >= MIN_CLOSES) return history;
   }
   return null;
 }
@@ -101,66 +110,76 @@ async function finnhubQuote(symbol: string): Promise<{ c: number; dp: number } |
   return fetchJson(url);
 }
 
-async function fredSeries(seriesId: string): Promise<number[] | null> {
+async function fredSeries(seriesId: string): Promise<HistoryPoint[] | null> {
   const url = isDev
     ? `/api/fred/series/observations?series_id=${seriesId}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=120`
     : `/api/fred-observations?series_id=${seriesId}&limit=120`;
   if (isDev && !FRED_KEY) return null;
   const data = await fetchJson<{
-    observations: { value: string }[];
+    observations: { date: string; value: string }[];
   }>(url);
   if (!data?.observations?.length) return null;
   const vals = data.observations
-    .map((o) => parseFloat(o.value))
-    .filter((v) => !Number.isNaN(v))
+    .map((o) => ({
+      date: o.date,
+      value: parseFloat(o.value),
+    }))
+    .filter((point) => !Number.isNaN(point.value))
     .reverse();
   return vals.length >= MIN_CLOSES ? vals : null;
 }
 
-async function coingeckoHistory(id: string): Promise<number[] | null> {
+async function coingeckoHistory(id: string): Promise<HistoryPoint[] | null> {
   const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=90`;
   const data = await fetchJson<{ prices: [number, number][] }>(url);
   if (!data?.prices?.length) return null;
-  return data.prices.map((p) => p[1]);
+  return data.prices.map((p) => ({
+    date: new Date(p[0]).toISOString().slice(0, 10),
+    value: p[1],
+  }));
 }
 
 export async function fetchMetric(
   instrument: InstrumentConfig,
 ): Promise<MetricResult> {
-  let closes: number[] | null = null;
+  let history: HistoryPoint[] | null = null;
   let price: number | undefined;
   let changePct: number | undefined;
 
   try {
     if (instrument.source === "finnhub" && instrument.finnhubSymbol) {
-      closes = await finnhubClosesForSymbol(instrument.finnhubSymbol);
+      history = await finnhubHistoryForSymbol(instrument.finnhubSymbol);
       const q = await finnhubQuote(instrument.finnhubSymbol);
       if (q?.c) {
         price = q.c;
         changePct = q.dp;
       }
     } else if (instrument.source === "fred" && instrument.fredSeriesId) {
-      closes = await fredSeries(instrument.fredSeriesId);
-      if (closes?.length) {
-        price = closes[closes.length - 1];
-        const prev = closes[closes.length - 2];
-        if (prev) changePct = ((price - prev) / prev) * 100;
+      history = await fredSeries(instrument.fredSeriesId);
+      if (history?.length) {
+        const last = history[history.length - 1]?.value;
+        const prev = history[history.length - 2]?.value;
+        price = last;
+        if (last !== undefined && prev) changePct = ((last - prev) / prev) * 100;
       }
     } else if (instrument.source === "coingecko" && instrument.coingeckoId) {
-      closes = await coingeckoHistory(instrument.coingeckoId);
-      if (closes?.length) {
-        price = closes[closes.length - 1];
-        const prev = closes[closes.length - 2];
-        if (prev) changePct = ((price - prev) / prev) * 100;
+      history = await coingeckoHistory(instrument.coingeckoId);
+      if (history?.length) {
+        const last = history[history.length - 1]?.value;
+        const prev = history[history.length - 2]?.value;
+        price = last;
+        if (last !== undefined && prev) changePct = ((last - prev) / prev) * 100;
       }
     }
   } catch {
     /* fall through to demo */
   }
 
-  if (!closes || closes.length < MIN_CLOSES) {
+  if (!history || history.length < MIN_CLOSES) {
     return buildDemoMetric(instrument);
   }
+
+  const closes = history.map((point) => point.value);
 
   const isVix = instrument.id === "vix";
   const isYield = instrument.category === "bonds";
@@ -185,6 +204,7 @@ export async function fetchMetric(
     price,
     changePct,
     closes,
+    history,
     technical,
     narrative: buildNarrative(
       instrument.name,

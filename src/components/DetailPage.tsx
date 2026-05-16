@@ -4,6 +4,7 @@ import type { CategorySummary, MetricResult } from "../types";
 
 export type AppRoute =
   | { kind: "home" }
+  | { kind: "score" }
   | { kind: "metric"; id: string }
   | { kind: "radar"; id: string };
 
@@ -66,8 +67,8 @@ const SPECIFIC_INTERPRETATIONS: Record<string, MetricInterpretation> = {
   },
   us10y: {
     why: "The US 10-year yield is a benchmark discount rate for global markets. It influences equity valuations, mortgages, credit pricing, and the relative appeal of bonds versus stocks.",
-    up: "Rising yields usually mean tighter financial conditions. They can pressure long-duration equities, housing, credit, gold, and speculative assets.",
-    down: "Falling yields can ease financial conditions and support valuations, but if yields fall because growth fears are rising, the signal can be defensive rather than bullish.",
+    up: "Rising yields usually mean interest-rate expectations are moving higher or investors are demanding more compensation for inflation, debt supply, or risk. That is often negative for long-duration stocks, housing, credit, gold, and speculative assets because future cash flows are discounted at a higher rate. It can also pull money out of equities into bonds. If yields rise because growth is strong, cyclicals can initially handle it; if yields rise because inflation or debt stress is rising, global finance usually tightens. M2 may slow as borrowing becomes less attractive and banks/lenders become more cautious.",
+    down: "Falling yields usually mean interest-rate expectations are moving lower. This can be positive for stocks, gold, housing, and liquidity-sensitive assets because discount rates and borrowing costs fall. It may also support M2 over time if easier policy encourages lending. But the reason matters: yields falling because inflation is cooling is usually constructive; yields falling because investors fear recession can mean defensive conditions, weaker earnings, and risk-off behavior.",
   },
   fed: {
     why: "The Fed funds rate is the base price of US dollar money. Because the dollar is the global reserve currency, Fed policy affects liquidity, capital flows, exchange rates, and risk appetite worldwide.",
@@ -177,8 +178,28 @@ function formatLevel(value?: number): string {
   return value.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
+function getYAxisLabel(metric: MetricResult): string {
+  const id = metric.instrument.id;
+  const symbol = metric.instrument.symbol;
+
+  if (id === "copper") return "US$/tonne";
+  if (id === "gold" || id === "silver") return "US$/oz";
+  if (id === "oil") return "US$/barrel";
+  if (id === "iron" || id === "lithium") return "US$ proxy";
+  if (metric.instrument.category === "bonds" || metric.instrument.category === "rates") return "% yield / policy rate";
+  if (metric.instrument.category === "fx") return `${symbol} exchange rate`;
+  if (metric.instrument.category === "crypto") return "US$";
+  if (metric.instrument.category === "liquidity") return id === "global-liq" ? "DXY proxy" : "US$ billions";
+  if (metric.instrument.category === "indices") return "Index points";
+  if (metric.instrument.category === "tech" || metric.instrument.category === "mining") return "Share price (US$ / proxy)";
+  if (metric.instrument.category === "volatility") return id === "vix" ? "VIX index" : "Index level";
+
+  return "Metric level";
+}
+
 function MetricDetail({ metric }: { metric: MetricResult }) {
   const interpretation = getMetricInterpretation(metric);
+  const yAxisLabel = getYAxisLabel(metric);
 
   return (
     <main className="detail-page">
@@ -197,7 +218,12 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
         </div>
       </header>
 
-      <LineChart values={metric.closes} title={metric.instrument.name} />
+      <LineChart
+        history={metric.history}
+        title={metric.instrument.name}
+        values={metric.closes}
+        yAxisLabel={yAxisLabel}
+      />
 
       <section className="detail-grid">
         <article className="detail-panel">
@@ -289,7 +315,14 @@ function RadarDetail({
         </div>
       </header>
 
-      {primary && <LineChart values={primary.closes} title={`${radar.title}: ${primary.instrument.name}`} />}
+      {primary && (
+        <LineChart
+          history={primary.history}
+          title={`${radar.title}: ${primary.instrument.name}`}
+          values={primary.closes}
+          yAxisLabel={getYAxisLabel(primary)}
+        />
+      )}
 
       <section className="detail-grid">
         <article className="detail-panel">
@@ -319,6 +352,82 @@ function RadarDetail({
   );
 }
 
+function GlobalScoreDetail({ categories }: { categories: CategorySummary[] }) {
+  const metrics = categories
+    .flatMap((category) => category.metrics)
+    .sort((a, b) => b.score - a.score);
+  const bullish = metrics.slice(0, 12);
+  const bearish = [...metrics].sort((a, b) => a.score - b.score).slice(0, 12);
+  const globalScore =
+    metrics.length === 0
+      ? 0
+      : Math.round(metrics.reduce((sum, metric) => sum + metric.score, 0) / metrics.length);
+
+  return (
+    <main className="detail-page">
+      <a className="back-link" href="#">
+        ← Back to dashboard
+      </a>
+      <header className="detail-hero">
+        <div>
+          <p className="detail-eyebrow">global score breakdown</p>
+          <h1>Most Bullish vs Most Bearish Assets</h1>
+          <p>
+            The global score is the average of all instrument scores. This page shows which
+            assets are pulling the dashboard higher and which are dragging it lower.
+          </p>
+        </div>
+        <div className="detail-score">
+          <span>{globalScore}</span>
+          <small>{scoreLabel(globalScore)} / 100</small>
+        </div>
+      </header>
+
+      <section className="score-columns">
+        <article className="detail-panel">
+          <h2>Most Bullish</h2>
+          <p>
+            These are the strongest current readings. High scores usually mean trend,
+            momentum, and moving-average position are supportive.
+          </p>
+          <div className="rank-list">
+            {bullish.map((metric, index) => (
+              <a href={`#/metric/${metric.instrument.id}`} key={metric.instrument.id}>
+                <span className="rank">{index + 1}</span>
+                <span>
+                  <strong>{metric.instrument.name}</strong>
+                  <small>{metric.instrument.category} · {metric.instrument.symbol}</small>
+                </span>
+                <b>{metric.score}</b>
+              </a>
+            ))}
+          </div>
+        </article>
+
+        <article className="detail-panel">
+          <h2>Most Bearish</h2>
+          <p>
+            These are the weakest current readings. Low scores usually mean falling trend,
+            weak momentum, or price below key averages.
+          </p>
+          <div className="rank-list bearish">
+            {bearish.map((metric, index) => (
+              <a href={`#/metric/${metric.instrument.id}`} key={metric.instrument.id}>
+                <span className="rank">{index + 1}</span>
+                <span>
+                  <strong>{metric.instrument.name}</strong>
+                  <small>{metric.instrument.category} · {metric.instrument.symbol}</small>
+                </span>
+                <b>{metric.score}</b>
+              </a>
+            ))}
+          </div>
+        </article>
+      </section>
+    </main>
+  );
+}
+
 export default function DetailPage({
   categories,
   route,
@@ -326,6 +435,10 @@ export default function DetailPage({
   categories: CategorySummary[];
   route: AppRoute;
 }) {
+  if (route.kind === "score") {
+    return <GlobalScoreDetail categories={categories} />;
+  }
+
   if (route.kind === "metric") {
     const metric = findMetric(categories, route.id);
     if (metric) return <MetricDetail metric={metric} />;

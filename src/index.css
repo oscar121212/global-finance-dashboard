@@ -78,6 +78,14 @@ button {
   border-radius: 12px;
   padding: 0.75rem 1.25rem;
   min-width: 140px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.global-score:hover {
+  border-color: var(--gold);
+  transform: translateY(-1px);
 }
 
 .global-score .label {
@@ -100,6 +108,14 @@ button {
 
 .global-score .value.low {
   color: var(--red);
+}
+
+.score-hint {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--gold-light);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .btn {
@@ -549,6 +565,10 @@ button {
   margin-bottom: 0.5rem;
 }
 
+.detail-chart__header strong {
+  color: var(--gold-light);
+}
+
 .detail-chart__header .up {
   color: var(--green);
 }
@@ -557,15 +577,57 @@ button {
   color: var(--red);
 }
 
+.chart-controls {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  padding: 0.25rem;
+  border: 1px solid rgba(139, 156, 179, 0.16);
+  border-radius: 8px;
+  background: var(--bg-panel);
+}
+
+.chart-controls button {
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.chart-controls button.active,
+.chart-controls button:hover {
+  background: rgba(232, 197, 71, 0.16);
+  color: var(--gold-light);
+}
+
 .detail-chart svg {
   display: block;
   width: 100%;
   height: auto;
 }
 
+.chart-axis {
+  stroke: rgba(139, 156, 179, 0.42);
+  stroke-width: 1;
+}
+
 .chart-grid {
   stroke: rgba(139, 156, 179, 0.18);
   stroke-width: 1;
+}
+
+.chart-label {
+  fill: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chart-tick {
+  fill: var(--muted);
+  font-size: 12px;
 }
 
 .chart-line {
@@ -659,6 +721,69 @@ button {
 
 .detail-list strong {
   color: var(--gold-light);
+}
+
+.score-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.rank-list a {
+  display: grid;
+  grid-template-columns: 34px 1fr 52px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(61, 214, 140, 0.22);
+  border-radius: 9px;
+  background: var(--bg-panel);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.rank-list.bearish a {
+  border-color: rgba(240, 113, 120, 0.22);
+}
+
+.rank-list a:hover {
+  border-color: var(--gold);
+}
+
+.rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(232, 197, 71, 0.14);
+  color: var(--gold-light);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.rank-list strong,
+.rank-list small {
+  display: block;
+}
+
+.rank-list small {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
+}
+
+.rank-list b {
+  justify-self: end;
+  color: var(--gold-light);
+  font-size: 1.1rem;
 }
 
 @media (max-width: 640px) {
