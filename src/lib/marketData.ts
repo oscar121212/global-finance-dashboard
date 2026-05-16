@@ -244,10 +244,12 @@ export async function fetchMetric(
 
   try {
     if (instrument.source === "finnhub" && instrument.finnhubSymbol) {
-      history = await finnhubHistoryForSymbol(instrument.finnhubSymbol);
-      if (!history || history.length < MIN_CLOSES) {
-        history = await yahooHistoryForSymbol(instrument.finnhubSymbol);
-      }
+      const finnhubHistory = await finnhubHistoryForSymbol(instrument.finnhubSymbol);
+      const yahooHistory = await yahooHistoryForSymbol(instrument.finnhubSymbol);
+      history =
+        yahooHistory && (!finnhubHistory || yahooHistory.length > finnhubHistory.length)
+          ? yahooHistory
+          : finnhubHistory;
       const q = await finnhubQuote(instrument.finnhubSymbol);
       if (q?.c) {
         price = q.c;

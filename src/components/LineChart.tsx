@@ -124,6 +124,9 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
       <div className="detail-chart__header">
         <span>
           Last {chartPoints.length} {periodLabel} · <strong>{yAxisLabel}</strong>
+          <small className="chart-range">
+            {formatDate(firstDate)} to {formatDate(lastDate)}
+          </small>
         </span>
         <strong className={change >= 0 ? "up" : "down"}>
           {change >= 0 ? "+" : ""}

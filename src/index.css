@@ -594,6 +594,13 @@ button {
   color: var(--gold-light);
 }
 
+.chart-range {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
 .detail-chart__header .up {
   color: var(--green);
 }
