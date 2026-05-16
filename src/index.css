@@ -202,6 +202,15 @@ button {
   font-weight: 600;
 }
 
+.card-link {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.card-link:hover {
+  color: var(--gold-light);
+}
+
 .score-ring {
   flex-shrink: 0;
   width: 52px;
@@ -366,6 +375,14 @@ button {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: rgba(26, 36, 51, 0.78);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.macro-radar__card:hover {
+  border-color: rgba(232, 197, 71, 0.65);
+  transform: translateY(-1px);
 }
 
 .macro-radar__card.strong {
@@ -428,4 +445,209 @@ button {
 .macro-radar__demo-note {
   margin-top: 0.35rem;
   color: var(--muted);
+}
+
+.detail-page {
+  padding-bottom: 2rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--gold-light);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--text);
+}
+
+.detail-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(201, 162, 39, 0.14), transparent 32rem),
+    var(--bg-panel);
+}
+
+.detail-hero h1 {
+  margin: 0 0 0.45rem;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(1.55rem, 4vw, 2.2rem);
+}
+
+.detail-hero p {
+  margin: 0;
+  max-width: 54rem;
+  color: var(--muted);
+}
+
+.detail-eyebrow {
+  margin: 0 0 0.35rem !important;
+  color: var(--gold-light) !important;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.detail-score {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 112px;
+  min-height: 92px;
+  border: 1px solid rgba(232, 197, 71, 0.26);
+  border-radius: 12px;
+  background: rgba(10, 14, 20, 0.55);
+}
+
+.detail-score span {
+  color: var(--gold-light);
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.detail-score small {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.detail-chart {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+
+.detail-chart__header,
+.detail-chart__axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.detail-chart__header {
+  margin-bottom: 0.5rem;
+}
+
+.detail-chart__header .up {
+  color: var(--green);
+}
+
+.detail-chart__header .down {
+  color: var(--red);
+}
+
+.detail-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-grid {
+  stroke: rgba(139, 156, 179, 0.18);
+  stroke-width: 1;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--gold-light);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.chart-empty {
+  margin-bottom: 1rem;
+  padding: 2rem;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.detail-panel {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+
+.detail-panel h2 {
+  margin: 0 0 0.55rem;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.2rem;
+}
+
+.detail-panel p {
+  margin: 0 0 0.7rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.detail-note {
+  color: var(--red) !important;
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-list a {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(139, 156, 179, 0.16);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.detail-list a:hover {
+  border-color: var(--gold);
+}
+
+.detail-list strong {
+  color: var(--gold-light);
+}
+
+@media (max-width: 640px) {
+  .detail-hero {
+    flex-direction: column;
+  }
+
+  .detail-score {
+    align-items: flex-start;
+    width: 100%;
+    padding: 0.85rem;
+  }
 }

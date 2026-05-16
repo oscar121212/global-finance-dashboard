@@ -184,6 +184,7 @@ export async function fetchMetric(
     score,
     price,
     changePct,
+    closes,
     technical,
     narrative: buildNarrative(
       instrument.name,

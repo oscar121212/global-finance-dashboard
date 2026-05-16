@@ -15,7 +15,11 @@ export default function MetricCard({ metric }: { metric: MetricResult }) {
     <article className="card">
       <div className="card-top">
         <div>
-          <h3>{instrument.name}</h3>
+          <h3>
+            <a className="card-link" href={`#/metric/${instrument.id}`}>
+              {instrument.name}
+            </a>
+          </h3>
           <span className="symbol">{instrument.symbol}</span>
         </div>
         <div className={`score-ring ${cls}`} title="Health score 0–100">

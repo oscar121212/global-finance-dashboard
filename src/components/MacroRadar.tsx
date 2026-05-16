@@ -1,44 +1,51 @@
 import type { CategorySummary, MetricResult } from "../types";
 
 type RadarItem = {
+  id: string;
   title: string;
   why: string;
   metricIds: string[];
   chartFocus: string;
 };
 
-const RADAR_ITEMS: RadarItem[] = [
+export const RADAR_ITEMS: RadarItem[] = [
   {
+    id: "liquidity-fed",
     title: "Liquidity & The Fed",
     why: "Druckenmiller often emphasizes that liquidity and central-bank policy can dominate fundamentals at major turning points.",
     metricIds: ["m2", "global-liq", "fed"],
     chartFocus: "M2, broad liquidity, Fed funds",
   },
   {
+    id: "rates-yields",
     title: "Rates & Yield Pressure",
     why: "Long rates influence equity multiples, credit creation, mortgages, and the cost of capital.",
     metricIds: ["us10y", "fed", "dxy"],
     chartFocus: "US 10Y, policy rates, dollar",
   },
   {
+    id: "dollar-conditions",
     title: "Dollar & Global Financial Conditions",
     why: "A strong dollar often tightens global liquidity and can pressure commodities, EM assets, and miners.",
     metricIds: ["dxy", "eurusd", "audusd"],
     chartFocus: "DXY, EUR/USD, AUD/USD",
   },
   {
+    id: "equity-leadership",
     title: "Equity Trend & Leadership",
     why: "He is known for respecting price action and market leadership rather than arguing with the tape.",
     metricIds: ["spx", "ndx", "dji"],
     chartFocus: "S&P 500, Nasdaq, Dow",
   },
   {
+    id: "commodities-cyclicals",
     title: "Commodities & Cyclicals",
     why: "Copper, gold, oil, and miners help reveal whether markets are pricing growth, inflation, or stress.",
     metricIds: ["copper", "gold", "oil", "bhp"],
     chartFocus: "Copper, gold, crude, miners",
   },
   {
+    id: "volatility-speculation",
     title: "Volatility & Speculative Appetite",
     why: "VIX and high-beta assets help show whether investors are seeking risk or running for cover.",
     metricIds: ["vix", "btc", "nvda"],
@@ -99,7 +106,11 @@ export default function MacroRadar({
 
       <div className="macro-radar__grid">
         {cards.map((card) => (
-          <article className={`macro-radar__card ${card.tone}`} key={card.title}>
+          <a
+            className={`macro-radar__card ${card.tone}`}
+            href={`#/radar/${card.id}`}
+            key={card.title}
+          >
             <div className="macro-radar__score">
               <span>{card.score}</span>
               <small>{label(card.score)}</small>
@@ -114,7 +125,7 @@ export default function MacroRadar({
                 </span>
               )}
             </div>
-          </article>
+          </a>
         ))}
       </div>
     </section>

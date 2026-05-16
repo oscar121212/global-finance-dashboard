@@ -37,6 +37,7 @@ export interface MetricResult {
   score: number;
   price?: number;
   changePct?: number;
+  closes?: number[];
   technical: TechnicalSignals;
   narrative: string;
   updatedAt: string;

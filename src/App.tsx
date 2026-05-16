@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import CategorySection from "./components/CategorySection";
+import DetailPage, { type AppRoute } from "./components/DetailPage";
 import MacroRadar from "./components/MacroRadar";
 import { loadDashboard } from "./lib/dashboard";
 import { hasLiveKeys } from "./lib/marketData";
@@ -11,6 +12,14 @@ function scoreClass(score: number): string {
   return "mid";
 }
 
+function parseRoute(): AppRoute {
+  const hash = window.location.hash.replace(/^#\/?/, "");
+  const [kind, id] = hash.split("/");
+  if (kind === "metric" && id) return { kind: "metric", id };
+  if (kind === "radar" && id) return { kind: "radar", id };
+  return { kind: "home" };
+}
+
 export default function App() {
   const [state, setState] = useState<DashboardState>({
     categories: [],
@@ -20,6 +29,7 @@ export default function App() {
     error: null,
     dataMode: "demo",
   });
+  const [route, setRoute] = useState<AppRoute>(() => parseRoute());
 
   const refresh = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
@@ -43,6 +53,12 @@ export default function App() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const onHashChange = () => setRoute(parseRoute());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   const showApiHint = !hasLiveKeys();
 
   if (state.loading && state.categories.length === 0) {
@@ -50,6 +66,14 @@ export default function App() {
       <div className="loading-screen">
         <div className="spinner" />
         <p>Loading global market data…</p>
+      </div>
+    );
+  }
+
+  if (route.kind !== "home") {
+    return (
+      <div className="app">
+        <DetailPage categories={state.categories} route={route} />
       </div>
     );
   }

@@ -48,6 +48,7 @@ export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
     score,
     price,
     changePct,
+    closes,
     technical,
     narrative: buildNarrative(instrument.name, score, technical, changePct),
     updatedAt: new Date().toISOString(),
