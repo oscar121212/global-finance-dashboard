@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import CategorySection from "./components/CategorySection";
 import DetailPage, { type AppRoute } from "./components/DetailPage";
 import MacroRadar from "./components/MacroRadar";
@@ -83,6 +84,7 @@ export default function App() {
     return (
       <div className="app">
         <DetailPage categories={state.categories} route={route} />
+        <Analytics />
       </div>
     );
   }
@@ -150,6 +152,7 @@ export default function App() {
         for VIX, rising yields, and strong USD where appropriate). Not financial
         advice. For education and research only.
       </footer>
+      <Analytics />
     </div>
   );
 }
