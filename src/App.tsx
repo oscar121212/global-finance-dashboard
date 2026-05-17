@@ -12,6 +12,12 @@ function scoreClass(score: number): string {
   return "mid";
 }
 
+function scoreLabel(score: number): string {
+  if (score >= 65) return "Supportive";
+  if (score <= 35) return "Warning";
+  return "Mixed";
+}
+
 function formatUpdatedDate(value: string): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -88,69 +94,125 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>Global Financial Health Dashboard</h1>
-          <p className="subtitle">
-            Scored view of liquidity, indices, FX, bonds, volatility, commodities,
-            tech, mining, crypto, and policy rates — each ranked 0–100 with
-            technical context and plain-English explanations.
-          </p>
+    <div className="app dashboard-app">
+      <aside className="side-rail">
+        <a className="side-logo" href="#">
+          <span>G</span>
+          <div>
+            <strong>Global Health</strong>
+            <small>Macro Terminal</small>
+          </div>
+        </a>
+        <nav className="side-nav" aria-label="Dashboard sections">
+          <a href="#score-panel">Dashboard</a>
+          <a href="#macro-radar-heading">Macro Radar</a>
+          {state.categories.map((cat) => (
+            <a href={`#${cat.id}`} key={cat.id}>
+              <span>{cat.title.replace("Major ", "").replace("Global ", "")}</span>
+              <strong className={scoreClass(cat.averageScore)}>{cat.averageScore}</strong>
+            </a>
+          ))}
+        </nav>
+        <div className="side-footer">
+          <span className={`badge ${state.dataMode}`}>{state.dataMode} data</span>
+          {state.lastRefresh && (
+            <small>Updated {formatUpdatedDate(state.lastRefresh)}</small>
+          )}
         </div>
-        <div className="header-actions">
-          <a
-            className={`global-score ${scoreClass(state.globalScore)}`}
-            href="#/score"
-            title="View bullish and bearish score breakdown"
-          >
-            <span className="label">Global score</span>
-            <span className={`value ${scoreClass(state.globalScore)}`}>
-              {state.globalScore}
-            </span>
-            <span className="score-hint">View leaders</span>
-          </a>
+      </aside>
+
+      <main className="dashboard-main">
+        <div className="terminal-alert">
+          <span>Live macro terminal</span>
+          <p>
+            Scores blend 65% weekly trend and 35% daily timing. Extreme 0/100
+            readings are intentionally rare.
+          </p>
           <button
             type="button"
             className="btn"
             onClick={refresh}
             disabled={state.loading}
           >
-            {state.loading ? "Refreshing…" : "Refresh"}
+            {state.loading ? "Refreshing…" : "Refresh data"}
           </button>
-          <span className={`badge ${state.dataMode}`}>{state.dataMode} data</span>
-          {state.lastRefresh && (
-            <span className="meta">
-              Updated {formatUpdatedDate(state.lastRefresh)}
+        </div>
+
+        {state.error && <div className="error-banner">{state.error}</div>}
+
+        {showApiHint && (
+          <div className="api-hint">
+            <strong>Live data:</strong> Add API keys in <code>.env</code> —{" "}
+            <code>VITE_FINNHUB_API_KEY</code> and/or <code>VITE_FRED_API_KEY</code>.
+            Until then, scores use realistic <strong>demo</strong> series.
+          </div>
+        )}
+
+        <header className="score-hero" id="score-panel">
+          <a
+            className={`global-score ${scoreClass(state.globalScore)}`}
+            href="#/score"
+            title="View bullish and bearish score breakdown"
+          >
+            <span className={`value ${scoreClass(state.globalScore)}`}>
+              {state.globalScore}
             </span>
-          )}
-        </div>
-      </header>
+            <span className="label">/100</span>
+          </a>
+          <div className="score-hero__copy">
+            <p className="eyebrow">Global Financial Health Score</p>
+            <h1>{scoreLabel(state.globalScore)} conditions across world markets</h1>
+            <p>
+              A terminal-style read on liquidity, indices, FX, rates, commodities,
+              crypto, miners, semiconductors, and central-bank policy.
+            </p>
+            <div className="hero-pills">
+              <span>Weekly weighted</span>
+              <span>Daily timing</span>
+              <span>RSI</span>
+              <span>MACD</span>
+              <span>OBV</span>
+              <span>Structure</span>
+            </div>
+          </div>
+          <div className="score-hero__list" aria-label="Category scores">
+            {state.categories.slice(0, 10).map((cat) => (
+              <a href={`#${cat.id}`} key={cat.id}>
+                <span>{cat.title.replace("Major ", "").replace("Global ", "")}</span>
+                <strong className={scoreClass(cat.averageScore)}>
+                  {cat.averageScore}
+                </strong>
+              </a>
+            ))}
+          </div>
+        </header>
 
-      {state.error && <div className="error-banner">{state.error}</div>}
+        <section className="category-overview" aria-label="Dashboard category overview">
+          {state.categories.map((cat) => (
+            <a className={`overview-card ${scoreClass(cat.averageScore)}`} href={`#${cat.id}`} key={cat.id}>
+              <span>{cat.title}</span>
+              <strong>{cat.averageScore}</strong>
+              <small>{scoreLabel(cat.averageScore)}</small>
+              <div className="overview-meter">
+                <i style={{ width: `${cat.averageScore}%` }} />
+              </div>
+            </a>
+          ))}
+        </section>
 
-      {showApiHint && (
-        <div className="api-hint">
-          <strong>Live data:</strong> Add API keys in <code>.env</code> —{" "}
-          <code>VITE_FINNHUB_API_KEY</code> (free at finnhub.io) and/or{" "}
-          <code>VITE_FRED_API_KEY</code> (free at fred.stlouisfed.org). Until
-          then, scores use realistic <strong>demo</strong> series so you can
-          preview the full dashboard.
-        </div>
-      )}
+        <MacroRadar categories={state.categories} />
 
-      <MacroRadar categories={state.categories} />
+        {state.categories.map((cat) => (
+          <CategorySection key={cat.id} category={cat} />
+        ))}
 
-      {state.categories.map((cat) => (
-        <CategorySection key={cat.id} category={cat} />
-      ))}
-
-      <footer className="footer-note">
-        Scores blend 65% weekly trend and 35% daily timing using trend, RSI,
-        MACD, volume, structure, and position vs 100/200-period averages
-        (inverted for VIX, rising yields, and strong USD where appropriate).
-        Not financial advice. For education and research only.
-      </footer>
+        <footer className="footer-note">
+          Scores blend 65% weekly trend and 35% daily timing using trend, RSI,
+          MACD, volume, structure, and position vs 100/200-period averages
+          (inverted for VIX, rising yields, and strong USD where appropriate).
+          Not financial advice. For education and research only.
+        </footer>
+      </main>
     </div>
   );
 }
