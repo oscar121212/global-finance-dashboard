@@ -23,21 +23,23 @@ function syntheticCloses(seed: string, days = 3650): number[] {
   return closes;
 }
 
-function historyFromCloses(closes: number[]): HistoryPoint[] {
+function historyFromCloses(closes: number[], seed: string): HistoryPoint[] {
   const today = new Date();
+  const rand = seededRandom(`${seed}-volume`);
   return closes.map((value, index) => {
     const date = new Date(today);
     date.setDate(today.getDate() - (closes.length - 1 - index));
     return {
       date: date.toISOString().slice(0, 10),
       value,
+      volume: Math.round(500_000 + rand() * 5_000_000),
     };
   });
 }
 
 export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
   const closes = syntheticCloses(instrument.id);
-  const history = historyFromCloses(closes);
+  const history = historyFromCloses(closes, instrument.id);
   const isVix = instrument.id === "vix";
   const isYield =
     instrument.category === "bonds" || instrument.category === "rates";
@@ -50,8 +52,8 @@ export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
     invert,
     isYield: isYield && instrument.category === "bonds",
     isVix,
-  });
-  const technical = analyzeTechnicals(closes, invert);
+  }, history);
+  const technical = analyzeTechnicals(closes, invert, history);
   const price = closes[closes.length - 1]!;
   const prev = closes[closes.length - 2] ?? price;
   const changePct = ((price - prev) / prev) * 100;

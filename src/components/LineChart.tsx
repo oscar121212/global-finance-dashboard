@@ -163,6 +163,11 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
   const lastDate = chartPoints[chartPoints.length - 1]!.date;
   const periodLabel =
     timeframe === "daily" ? "daily periods" : timeframe === "weekly" ? "weekly periods" : "monthly periods";
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map((ratio) => ({
+    ratio,
+    value: max - ratio * range,
+    y: topPad + ratio * (height - topPad - bottomPad),
+  }));
 
   return (
     <div className="detail-chart" aria-label={`${title} line chart`}>
@@ -206,30 +211,25 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
         >
           {yAxisLabel}
         </text>
-        <text className="chart-tick" x={leftPad - 10} y={topPad + 4} textAnchor="end">
-          {formatValue(max)}
-        </text>
-        <text
-          className="chart-tick"
-          x={leftPad - 10}
-          y={height - bottomPad + 4}
-          textAnchor="end"
-        >
-          {formatValue(min)}
-        </text>
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-          const y = topPad + ratio * (height - topPad - bottomPad);
-          return (
+        {gridLines.map((line) => (
+          <g key={line.ratio}>
             <line
               className="chart-grid"
-              key={ratio}
               x1={leftPad}
               x2={width - rightPad}
-              y1={y}
-              y2={y}
+              y1={line.y}
+              y2={line.y}
             />
-          );
-        })}
+            <text
+              className="chart-tick"
+              x={leftPad - 10}
+              y={line.y + 4}
+              textAnchor="end"
+            >
+              {formatValue(line.value)}
+            </text>
+          </g>
+        ))}
         <line
           x1={leftPad}
           x2={leftPad}

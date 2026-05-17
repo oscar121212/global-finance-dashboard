@@ -6,6 +6,7 @@ export type CategoryId =
   | "volatility"
   | "commodities"
   | "tech"
+  | "semiconductors"
   | "mining"
   | "crypto"
   | "rates";
@@ -27,15 +28,29 @@ export interface InstrumentConfig {
 
 export interface TechnicalSignals {
   rsi14: number;
-  vsSma20: "above" | "below" | "at";
-  vsSma50: "above" | "below" | "at";
-  trend20: "up" | "down" | "flat";
+  vsSma100: "above" | "below" | "at";
+  vsSma200: "above" | "below" | "at";
+  sma100Slope: "rising" | "falling" | "flat" | "unavailable";
+  sma200Slope: "rising" | "falling" | "flat" | "unavailable";
+  macdLine: number;
+  macdSignal: number;
+  macdHistogram: number;
+  macdBias: "bullish" | "bearish" | "neutral";
+  macdHistogramTrend: "rising" | "falling" | "flat";
+  obvTrend: "rising" | "falling" | "flat" | "unavailable";
+  marketStructure:
+    | "higher highs / higher lows"
+    | "lower highs / lower lows"
+    | "mixed structure"
+    | "consolidating"
+    | "insufficient data";
   summary: string;
 }
 
 export interface HistoryPoint {
   date: string;
   value: number;
+  volume?: number;
 }
 
 export interface MetricResult {

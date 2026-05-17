@@ -35,6 +35,11 @@ const SPECIFIC_INTERPRETATIONS: Record<string, MetricInterpretation> = {
     up: "Rising Euro M2 usually points to easier eurozone liquidity and can support European equities, credit, and global risk appetite.",
     down: "Falling Euro M2 usually points to tighter eurozone bank liquidity and credit conditions, which can pressure growth and risk assets.",
   },
+  "india-broad-money": {
+    why: "India broad money is included as the practical rupee money-stock proxy because India's monetary aggregates are commonly tracked through broad money measures rather than a clean FRED M2 equivalent.",
+    up: "Rising Indian broad money usually means easier rupee liquidity, stronger domestic credit creation, and better support for Indian equities, banks, infrastructure activity, and local demand.",
+    down: "Falling or weak Indian broad money usually means tighter domestic liquidity and can pressure credit growth, banks, consumption, and Indian risk assets.",
+  },
   "global-liq": {
     why: "Global liquidity is hard to measure in one clean series, so the dashboard uses dollar strength as a proxy. A weaker dollar often behaves like easier global liquidity because offshore borrowers and commodity buyers face less pressure.",
     up: "A rising score here means global conditions are becoming easier, often because the dollar is weakening or liquidity-sensitive assets are improving.",
@@ -74,6 +79,16 @@ const SPECIFIC_INTERPRETATIONS: Record<string, MetricInterpretation> = {
     why: "The US 10-year yield is a benchmark discount rate for global markets. It influences equity valuations, mortgages, credit pricing, and the relative appeal of bonds versus stocks.",
     up: "Rising yields usually mean interest-rate expectations are moving higher or investors are demanding more compensation for inflation, debt supply, or risk. That is often negative for long-duration stocks, housing, credit, gold, and speculative assets because future cash flows are discounted at a higher rate. It can also pull money out of equities into bonds. If yields rise because growth is strong, cyclicals can initially handle it; if yields rise because inflation or debt stress is rising, global finance usually tightens. M2 may slow as borrowing becomes less attractive and banks/lenders become more cautious.",
     down: "Falling yields usually mean interest-rate expectations are moving lower. This can be positive for stocks, gold, housing, and liquidity-sensitive assets because discount rates and borrowing costs fall. It may also support M2 over time if easier policy encourages lending. But the reason matters: yields falling because inflation is cooling is usually constructive; yields falling because investors fear recession can mean defensive conditions, weaker earnings, and risk-off behavior.",
+  },
+  us2y: {
+    why: "The US 2-year yield is one of the cleanest market reads on expected Federal Reserve policy over the next couple of years. It usually moves more with rate-cut or rate-hike expectations than with long-term growth assumptions.",
+    up: "Rising 2-year yields usually mean markets expect tighter Fed policy or fewer rate cuts. That tends to support the US dollar and pressure liquidity-sensitive assets.",
+    down: "Falling 2-year yields usually mean markets expect easier Fed policy or more rate cuts. That can support risk assets if inflation is cooling, but can be bearish if it reflects recession stress.",
+  },
+  us20y: {
+    why: "The US 20-year yield is a long-duration discount-rate signal. It matters for pensions, long bonds, mortgage-like assets, infrastructure valuations, and growth stocks.",
+    up: "Rising 20-year yields usually tighten long-duration financial conditions and can pressure gold, housing, utilities, infrastructure, and high-valuation growth equities.",
+    down: "Falling 20-year yields usually ease long-duration discount-rate pressure and can support gold and growth assets, unless the fall is driven by recession fears.",
   },
   fed: {
     why: "The Fed funds rate is the base price of US dollar money. Because the dollar is the global reserve currency, Fed policy affects liquidity, capital flows, exchange rates, and risk appetite worldwide.",
@@ -133,6 +148,11 @@ const CATEGORY_INTERPRETATIONS: Record<string, MetricInterpretation> = {
     up: "If this rises, it usually means investors are rewarding growth, AI/platform leadership, or easier financial conditions.",
     down: "If this falls, it can mean tighter rates, weaker growth expectations, or rotation away from high-valuation leaders.",
   },
+  semiconductors: {
+    why: "Semiconductors sit at the centre of AI, cloud, autos, industrial automation, smartphones, and electronics. They are highly cyclical but also lead major growth themes.",
+    up: "If this rises, markets are usually rewarding AI capex, chip demand, manufacturing investment, or stronger global technology leadership.",
+    down: "If this falls, it can signal weaker electronics demand, inventory correction, capex cuts, export-control risk, or broader risk-off rotation from growth.",
+  },
   mining: {
     why: "Mining companies translate commodity prices into equity-market performance. They are useful for reading resource-sector risk appetite and global growth expectations.",
     up: "If this rises, investors are usually pricing stronger commodity demand, better margins, or improved mining-sector sentiment.",
@@ -176,6 +196,120 @@ function scoreLabel(score: number): string {
   return "mixed";
 }
 
+function scoreClass(score: number): "strong" | "mid" | "low" {
+  if (score >= 65) return "strong";
+  if (score <= 35) return "low";
+  return "mid";
+}
+
+function scoreBreakdown(metric: MetricResult): { label: string; value: string }[] {
+  const tech = metric.technical;
+  const items: { label: string; value: string }[] = [
+    { label: "Base score", value: "Starts at 50/100" },
+    {
+      label: "Price vs 100-day SMA",
+      value:
+        tech.vsSma100 === "above"
+          ? "Price above SMA100 adds +10"
+          : tech.vsSma100 === "below"
+            ? "Price below SMA100 subtracts -10"
+            : "Price near SMA100 adds 0",
+    },
+    {
+      label: "Price vs 200-day SMA",
+      value:
+        tech.vsSma200 === "above"
+          ? "Price above SMA200 adds +10"
+          : tech.vsSma200 === "below"
+            ? "Price below SMA200 subtracts -10"
+            : "Price near SMA200 adds 0",
+    },
+    {
+      label: "100-day SMA slope",
+      value:
+        tech.sma100Slope === "rising"
+          ? "Rising SMA100 adds +8"
+          : tech.sma100Slope === "falling"
+            ? "Falling SMA100 subtracts -8"
+            : `${tech.sma100Slope} SMA100 adds 0`,
+    },
+    {
+      label: "200-day SMA slope",
+      value:
+        tech.sma200Slope === "rising"
+          ? "Rising SMA200 adds +8"
+          : tech.sma200Slope === "falling"
+            ? "Falling SMA200 subtracts -8"
+            : `${tech.sma200Slope} SMA200 adds 0`,
+    },
+  ];
+
+  if (tech.rsi14 >= 55 && tech.rsi14 <= 70) {
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} adds +10 (strong but not overheated)` });
+  } else if (tech.rsi14 > 70) {
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} subtracts -4 (overbought risk)` });
+  } else if (tech.rsi14 < 45 && tech.rsi14 >= 30) {
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} subtracts -8 (weak momentum)` });
+  } else if (tech.rsi14 < 30) {
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} adds +4 (oversold bounce potential)` });
+  } else {
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} adds 0 (neutral)` });
+  }
+
+  items.push({
+    label: "MACD",
+    value:
+      tech.macdBias === "bullish"
+        ? `Bullish MACD adds +10; ${tech.macdHistogramTrend} histogram adds ${tech.macdHistogramTrend === "rising" ? "+4" : tech.macdHistogramTrend === "falling" ? "-4" : "0"}`
+        : tech.macdBias === "bearish"
+          ? `Bearish MACD subtracts -10; ${tech.macdHistogramTrend} histogram adds ${tech.macdHistogramTrend === "rising" ? "+4" : tech.macdHistogramTrend === "falling" ? "-4" : "0"}`
+          : `Neutral MACD adds 0; ${tech.macdHistogramTrend} histogram adds ${tech.macdHistogramTrend === "rising" ? "+4" : tech.macdHistogramTrend === "falling" ? "-4" : "0"}`,
+  });
+
+  items.push({
+    label: "OBV volume confirmation",
+    value:
+      tech.obvTrend === "rising"
+        ? "Rising OBV adds +8 because volume is confirming accumulation"
+        : tech.obvTrend === "falling"
+          ? "Falling OBV subtracts -8 because volume is confirming distribution"
+          : `${tech.obvTrend} OBV adds 0`,
+  });
+
+  items.push({
+    label: "Market structure",
+    value:
+      tech.marketStructure === "higher highs / higher lows"
+        ? "Higher highs and higher lows add +12"
+        : tech.marketStructure === "lower highs / lower lows"
+          ? "Lower highs and lower lows subtract -12"
+          : tech.marketStructure === "consolidating"
+            ? "Consolidation subtracts -2 until price breaks out"
+            : `${tech.marketStructure} adds 0`,
+  });
+
+  if (
+    metric.instrument.id === "vix" ||
+    metric.instrument.category === "bonds" ||
+    metric.instrument.id === "dxy" ||
+    metric.instrument.id === "global-liq" ||
+    (metric.instrument.category === "rates" && metric.instrument.id !== "fed")
+  ) {
+    items.push({
+      label: "Macro inversion",
+      value:
+        "Score is inverted where a higher reading usually tightens conditions (for example VIX, yields, DXY, or some policy-rate/liquidity proxies).",
+    });
+  }
+
+  items.push({
+    label: "Final score",
+    value: `${metric.score}/100 (${scoreLabel(metric.score)})`,
+  });
+
+  return items;
+}
+
 function explainConditionScore(score: number): string {
   if (score <= 35) {
     return `A score of ${score} is a Warning because the average of the underlying indicators is weak. In practical terms, the group is showing poor trend, weak momentum, or conditions that tighten global finance.`;
@@ -198,9 +332,14 @@ function getYAxisLabel(metric: MetricResult): string {
   const symbol = metric.instrument.symbol;
 
   if (id === "copper") return "US$/tonne";
-  if (id === "gold" || id === "silver") return "US$/oz";
+  if (id === "gold" || id === "silver" || id === "platinum") return "US$/oz";
   if (id === "oil") return "US$/barrel";
-  if (id === "iron" || id === "lithium") return "US$ proxy";
+  if (id === "iron") return "US$/dry metric tonne";
+  if (id === "aluminium" || id === "tin" || id === "zinc") return "US$/tonne";
+  if (id === "natural-gas") return "US$/MMBtu";
+  if (id === "lumber") return "US$/1,000 board feet";
+  if (id === "wheat") return "US cents/bushel";
+  if (["lithium", "sprott-uranium", "uranium", "potash", "coking-coal", "thermal-coal"].includes(id)) return "US$ listed proxy";
   if (metric.instrument.category === "bonds" || metric.instrument.category === "rates") return "% yield / policy rate";
   if (metric.instrument.category === "fx") return `${symbol} exchange rate`;
   if (metric.instrument.category === "crypto") return "US$";
@@ -209,10 +348,11 @@ function getYAxisLabel(metric: MetricResult): string {
     if (id === "china-m2") return "Chinese yuan";
     if (id === "japan-m2") return "Japanese yen";
     if (id === "euro-m2") return "Euro";
+    if (id === "india-broad-money") return "Indian rupee";
     return "US$ billions";
   }
   if (metric.instrument.category === "indices") return "Index points";
-  if (metric.instrument.category === "tech" || metric.instrument.category === "mining") return "Share price (US$ / proxy)";
+  if (metric.instrument.category === "tech" || metric.instrument.category === "semiconductors" || metric.instrument.category === "mining") return "US$ equivalent share price / proxy";
   if (metric.instrument.category === "volatility") return id === "vix" ? "VIX index" : "Index level";
 
   return "Metric level";
@@ -233,7 +373,7 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
           <h1>{metric.instrument.name}</h1>
           <p>{metric.instrument.explanation}</p>
         </div>
-        <div className="detail-score">
+        <div className={`detail-score ${scoreClass(metric.score)}`}>
           <span>{metric.score}</span>
           <small>{scoreLabel(metric.score)} / 100</small>
         </div>
@@ -285,6 +425,21 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
             </p>
           )}
         </article>
+        <article className="detail-panel" id="score-breakdown">
+          <h2>Score Breakdown</h2>
+          <p>
+            This is the scoring recipe behind the ranking out of 100 for this
+            metric.
+          </p>
+          <div className="score-breakdown-list">
+            {scoreBreakdown(metric).map((item) => (
+              <div key={item.label}>
+                <strong>{item.label}</strong>
+                <span>{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </article>
       </section>
     </main>
   );
@@ -332,7 +487,7 @@ function RadarDetail({
           <h1>{radar.title}</h1>
           <p>{radar.why}</p>
         </div>
-        <div className="detail-score">
+        <div className={`detail-score ${scoreClass(score)}`}>
           <span>{score}</span>
           <small>{scoreLabel(score)} / 100</small>
         </div>
@@ -434,7 +589,7 @@ function GlobalScoreDetail({ categories }: { categories: CategorySummary[] }) {
             assets are pulling the dashboard higher and which are dragging it lower.
           </p>
         </div>
-        <div className="detail-score">
+        <div className={`detail-score ${scoreClass(globalScore)}`}>
           <span>{globalScore}</span>
           <small>{scoreLabel(globalScore)} / 100</small>
         </div>

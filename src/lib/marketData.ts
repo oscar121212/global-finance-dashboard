@@ -24,11 +24,25 @@ const FINNHUB_STOCK_FALLBACKS: Record<string, string[]> = {
   "^GSPC": ["SPY", "IVV"],
   "^IXIC": ["QQQ"],
   "^DJI": ["DIA"],
+  "^NSEI": ["INDA"],
   "^TNX": ["IEF"],
   "GC=F": ["GLD"],
   "SI=F": ["SLV"],
   "HG=F": ["CPER"],
   "CL=F": ["USO"],
+  "LITP": ["LIT", "ALB"],
+  "URNM": ["URA"],
+  "PL=F": ["PPLT"],
+  "ALI=F": ["JJU", "AA"],
+  "TIN=F": ["JJT"],
+  "ZNC=F": ["JJN"],
+  "HCC": ["ARCH"],
+  "ARCH": ["BTU"],
+  "U.UN.TO": ["SRUUF", "URNM"],
+  "NTR": ["MOS"],
+  "NG=F": ["UNG"],
+  "LBS=F": ["WOOD"],
+  "ZW=F": ["WEAT"],
   "^HSI": ["FXI"],
   "^GDAXI": ["EWG"],
   "^STI": ["EWS"],
@@ -41,12 +55,14 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   "OANDA:EUR_USD": "EURUSD=X",
   "OANDA:AUD_USD": "AUDUSD=X",
   "OANDA:NZD_USD": "NZDUSD=X",
+  "OANDA:AUD_NZD": "AUDNZD=X",
   "OANDA:GBP_USD": "GBPUSD=X",
   "OANDA:USD_JPY": "JPY=X",
   "DX-Y.NYB": "DX-Y.NYB",
   "^GSPC": "^GSPC",
   "^IXIC": "^IXIC",
   "^DJI": "^DJI",
+  "^NSEI": "^NSEI",
   "399001.SZ": "399001.SZ",
   "^STI": "^STI",
   "^HSI": "^HSI",
@@ -59,6 +75,20 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   "SI=F": "SI=F",
   "HG=F": "HG=F",
   "CL=F": "CL=F",
+  "TIO=F": "TIO=F",
+  "LITP": "LITP",
+  "URNM": "URNM",
+  "PL=F": "PL=F",
+  "ALI=F": "ALI=F",
+  "TIN=F": "TIN=F",
+  "ZNC=F": "ZNC=F",
+  "HCC": "HCC",
+  "ARCH": "ARCH",
+  "U.UN.TO": "U.UN.TO",
+  "NTR": "NTR",
+  "NG=F": "NG=F",
+  "LBS=F": "LBS=F",
+  "ZW=F": "ZW=F",
   "NST.AX": "NST.AX",
 };
 
@@ -66,6 +96,7 @@ const YAHOO_FALLBACKS: Record<string, string[]> = {
   "^GSPC": ["SPY"],
   "^IXIC": ["QQQ"],
   "^DJI": ["DIA"],
+  "^NSEI": ["INDA"],
   "^TNX": ["IEF"],
   "^AXJO": ["EWA"],
   "^NZ50": ["ENZL"],
@@ -77,6 +108,19 @@ const YAHOO_FALLBACKS: Record<string, string[]> = {
   "SI=F": ["SLV"],
   "HG=F": ["CPER"],
   "CL=F": ["USO"],
+  "LITP": ["LIT", "ALB"],
+  "URNM": ["URA"],
+  "PL=F": ["PPLT"],
+  "ALI=F": ["JJU", "AA"],
+  "TIN=F": ["JJT"],
+  "ZNC=F": ["JJN"],
+  "HCC": ["ARCH"],
+  "ARCH": ["BTU"],
+  "U.UN.TO": ["SRUUF", "URNM"],
+  "NTR": ["MOS"],
+  "NG=F": ["UNG"],
+  "LBS=F": ["WOOD"],
+  "ZW=F": ["WEAT"],
   "DX-Y.NYB": ["UUP"],
 };
 
@@ -93,6 +137,7 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 type FinnhubCandle = {
   c: number[];
   t: number[];
+  v?: number[];
   s?: string;
 };
 
@@ -103,6 +148,7 @@ type YahooChartResponse = {
       indicators?: {
         quote?: Array<{
           close?: Array<number | null>;
+          volume?: Array<number | null>;
         }>;
       };
     }>;
@@ -112,13 +158,16 @@ type YahooChartResponse = {
 function normalizeFinnhubHistory(data: FinnhubCandle | null): HistoryPoint[] | null {
   if (!data?.c?.length || data.s === "no_data") return null;
   return data.c
-    .map((value, index) => {
+    .map((value, index): HistoryPoint | null => {
       const seconds = data.t[index];
       if (!seconds || !Number.isFinite(value)) return null;
-      return {
+      const point: HistoryPoint = {
         date: new Date(seconds * 1000).toISOString().slice(0, 10),
         value,
       };
+      const volume = data.v?.[index];
+      if (volume !== undefined && Number.isFinite(volume)) point.volume = volume;
+      return point;
     })
     .filter((point): point is HistoryPoint => Boolean(point));
 }
@@ -170,20 +219,26 @@ async function yahooChart(symbol: string): Promise<HistoryPoint[] | null> {
   const result = data?.chart?.result?.[0];
   const timestamps = result?.timestamp;
   const closes = result?.indicators?.quote?.[0]?.close;
+  const volumes = result?.indicators?.quote?.[0]?.volume;
 
   if (!timestamps?.length || !closes?.length) return null;
 
   const history = timestamps
-    .map((seconds, index) => {
+    .map((seconds, index): HistoryPoint | null => {
       const value = closes[index];
       if (value === null || value === undefined || !Number.isFinite(value)) {
         return null;
       }
 
-      return {
+      const point: HistoryPoint = {
         date: new Date(seconds * 1000).toISOString().slice(0, 10),
         value,
       };
+      const volume = volumes?.[index];
+      if (volume !== null && volume !== undefined && Number.isFinite(volume)) {
+        point.volume = volume;
+      }
+      return point;
     })
     .filter((point): point is HistoryPoint => Boolean(point));
 
@@ -196,6 +251,42 @@ async function yahooHistoryForSymbol(symbol: string): Promise<HistoryPoint[] | n
     if (history && history.length >= MIN_CLOSES) return history;
   }
   return null;
+}
+
+function shouldConvertPriceToUsd(instrument: InstrumentConfig): boolean {
+  const symbol = instrument.yahooSymbol ?? instrument.finnhubSymbol ?? instrument.symbol;
+  if (instrument.category !== "tech" && instrument.category !== "mining") return false;
+  return symbol.endsWith(".AX");
+}
+
+async function convertAudHistoryToUsd(
+  history: HistoryPoint[],
+): Promise<HistoryPoint[] | null> {
+  const audUsd = await yahooChart("AUDUSD=X");
+  if (!audUsd?.length) return null;
+
+  const rates = [...audUsd].sort((a, b) => a.date.localeCompare(b.date));
+  let rateIndex = 0;
+
+  return [...history]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((point) => {
+      while (
+        rateIndex + 1 < rates.length &&
+        rates[rateIndex + 1]!.date <= point.date
+      ) {
+        rateIndex += 1;
+      }
+
+      const rate = rates[rateIndex]?.value;
+      if (!rate || !Number.isFinite(rate)) return point;
+
+      return {
+        date: point.date,
+        value: point.value * rate,
+        volume: point.volume,
+      };
+    });
 }
 
 async function finnhubQuote(symbol: string): Promise<{ c: number; dp: number } | null> {
@@ -269,8 +360,16 @@ export async function fetchMetric(
         yahooHistory && (!finnhubHistory || yahooHistory.length > finnhubHistory.length)
           ? yahooHistory
           : finnhubHistory;
+      if (history && shouldConvertPriceToUsd(instrument)) {
+        const converted = await convertAudHistoryToUsd(history);
+        if (converted) {
+          history = converted;
+          price = undefined;
+          changePct = undefined;
+        }
+      }
       const q = await finnhubQuote(instrument.finnhubSymbol);
-      if (q?.c) {
+      if (q?.c && !shouldConvertPriceToUsd(instrument)) {
         price = q.c;
         changePct = q.dp;
       }
@@ -311,8 +410,8 @@ export async function fetchMetric(
     instrument.id === "global-liq" ||
     (instrument.category === "rates" && instrument.id !== "fed");
 
-  const score = scoreFromTechnicals(closes, { invert, isYield, isVix });
-  const technical = analyzeTechnicals(closes, invert);
+  const score = scoreFromTechnicals(closes, { invert, isYield, isVix }, history);
+  const technical = analyzeTechnicals(closes, invert, history);
 
   if (price === undefined) price = closes[closes.length - 1];
   if (changePct === undefined && closes.length > 1) {

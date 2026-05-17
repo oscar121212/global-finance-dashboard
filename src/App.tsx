@@ -7,9 +7,17 @@ import { hasLiveKeys } from "./lib/marketData";
 import type { DashboardState } from "./types";
 
 function scoreClass(score: number): string {
-  if (score >= 65) return "";
+  if (score >= 65) return "strong";
   if (score <= 35) return "low";
   return "mid";
+}
+
+function formatUpdatedDate(value: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(value));
 }
 
 function parseRoute(): AppRoute {
@@ -113,7 +121,7 @@ export default function App() {
           <span className={`badge ${state.dataMode}`}>{state.dataMode} data</span>
           {state.lastRefresh && (
             <span className="meta">
-              Updated {new Date(state.lastRefresh).toLocaleString()}
+              Updated {formatUpdatedDate(state.lastRefresh)}
             </span>
           )}
         </div>

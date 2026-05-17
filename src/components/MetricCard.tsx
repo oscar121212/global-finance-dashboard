@@ -1,7 +1,7 @@
 import type { MetricResult } from "../types";
 
 function scoreClass(score: number): string {
-  if (score >= 65) return "";
+  if (score >= 65) return "strong";
   if (score <= 35) return "low";
   return "mid";
 }
@@ -12,7 +12,7 @@ export default function MetricCard({ metric }: { metric: MetricResult }) {
   const cls = scoreClass(score);
 
   return (
-    <article className="card">
+    <article className={`card ${cls}`}>
       <div className="card-top">
         <div>
           <h3>
@@ -22,9 +22,13 @@ export default function MetricCard({ metric }: { metric: MetricResult }) {
           </h3>
           <span className="symbol">{instrument.symbol}</span>
         </div>
-        <div className={`score-ring ${cls}`} title="Health score 0–100">
+        <a
+          className={`score-ring ${cls}`}
+          href={`#/metric/${instrument.id}`}
+          title="View score breakdown"
+        >
           {score}
-        </div>
+        </a>
       </div>
 
       <p className="explain">{instrument.explanation}</p>
@@ -49,8 +53,9 @@ export default function MetricCard({ metric }: { metric: MetricResult }) {
       )}
 
       <p className="ta">
-        <strong>Technical:</strong> RSI {technical.rsi14.toFixed(1)} · 20d trend{" "}
-        {technical.trend20} · vs SMA20 {technical.vsSma20}
+        <strong>Technical:</strong> RSI {technical.rsi14.toFixed(1)} · MACD{" "}
+        {technical.macdBias} · vs SMA200 {technical.vsSma200} · structure{" "}
+        {technical.marketStructure}
       </p>
 
       <p className="ta" style={{ marginTop: "-0.25rem" }}>
