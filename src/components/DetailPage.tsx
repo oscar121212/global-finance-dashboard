@@ -219,7 +219,12 @@ function scoreBreakdown(
           ? "Uses the latest daily closes. SMA100/SMA200 are daily moving averages, SMA slopes compare now vs 20 trading days ago, MACD/RSI are daily, OBV checks recent daily volume, and market structure uses roughly the last 60 trading days."
           : "Uses weekly closes built from the price history. SMA100/SMA200 are 100-week and 200-week moving averages, SMA slopes compare now vs 20 weeks ago, MACD/RSI are weekly, OBV checks weekly volume, and market structure uses roughly the last 60 weeks.",
     },
-    { label: "Base score", value: "Starts at 50/100" },
+    { label: "Base score", value: "Starts from neutral, then weighs evidence rather than simply adding points." },
+    {
+      label: "Score calibration",
+      value:
+        "Raw technical evidence is compressed toward neutral and capped in a normal market range. A 100/100 would require near-perfect conditions across every timeframe, trend, momentum, structure, and volume input.",
+    },
     {
       label: "Chart trend",
       value:
@@ -235,82 +240,78 @@ function scoreBreakdown(
       label: `Price vs 100-${period} SMA`,
       value:
         tech.vsSma100 === "above"
-          ? `Price above 100-${period} SMA adds +10`
+          ? `Price above 100-${period} SMA supports the intermediate trend`
           : tech.vsSma100 === "below"
-            ? `Price below 100-${period} SMA subtracts -10`
-            : `Price near 100-${period} SMA adds 0`,
+            ? `Price below 100-${period} SMA weakens the intermediate trend`
+            : `Price near 100-${period} SMA is neutral`,
     },
     {
       label: `Price vs 200-${period} SMA`,
       value:
         tech.vsSma200 === "above"
-          ? `Price above 200-${period} SMA adds +10`
+          ? `Price above 200-${period} SMA supports the long-term trend`
           : tech.vsSma200 === "below"
-            ? `Price below 200-${period} SMA subtracts -10`
-            : `Price near 200-${period} SMA adds 0`,
+            ? `Price below 200-${period} SMA weakens the long-term trend`
+            : `Price near 200-${period} SMA is neutral`,
     },
     {
       label: `100-${period} SMA slope`,
       value:
         tech.sma100Slope === "rising"
-          ? `Rising 100-${period} SMA adds +8`
+          ? `Rising 100-${period} SMA confirms improving intermediate trend`
           : tech.sma100Slope === "falling"
-            ? `Falling 100-${period} SMA subtracts -8`
-            : `${tech.sma100Slope} 100-${period} SMA adds 0`,
+            ? `Falling 100-${period} SMA confirms weakening intermediate trend`
+            : `${tech.sma100Slope} 100-${period} SMA is neutral`,
     },
     {
       label: `200-${period} SMA slope`,
       value:
         tech.sma200Slope === "rising"
-          ? `Rising 200-${period} SMA adds +8`
+          ? `Rising 200-${period} SMA confirms improving long-term trend`
           : tech.sma200Slope === "falling"
-            ? `Falling 200-${period} SMA subtracts -8`
-            : `${tech.sma200Slope} 200-${period} SMA adds 0`,
+            ? `Falling 200-${period} SMA confirms weakening long-term trend`
+            : `${tech.sma200Slope} 200-${period} SMA is neutral`,
     },
   ];
 
   if (tech.rsi14 >= 55 && tech.rsi14 <= 70) {
-    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} adds +10 (strong but not overheated)` });
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} is constructive without being too overheated` });
   } else if (tech.rsi14 > 70) {
-    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} subtracts -4 (overbought risk)` });
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} warns of overbought risk, so it does not get full credit` });
   } else if (tech.rsi14 < 45 && tech.rsi14 >= 30) {
-    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} subtracts -8 (weak momentum)` });
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} shows weak momentum` });
   } else if (tech.rsi14 < 30) {
-    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} adds +4 (oversold bounce potential)` });
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} is oversold, so the model treats it as bounce potential rather than a clean trend` });
   } else {
-    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} adds 0 (neutral)` });
+    items.push({ label: "RSI(14)", value: `RSI ${tech.rsi14.toFixed(1)} is neutral` });
   }
 
   items.push({
     label: "MACD",
     value:
-      tech.macdBias === "bullish"
-        ? `Bullish MACD adds +10; ${tech.macdHistogramTrend} histogram adds ${tech.macdHistogramTrend === "rising" ? "+4" : tech.macdHistogramTrend === "falling" ? "-4" : "0"}`
-        : tech.macdBias === "bearish"
-          ? `Bearish MACD subtracts -10; ${tech.macdHistogramTrend} histogram adds ${tech.macdHistogramTrend === "rising" ? "+4" : tech.macdHistogramTrend === "falling" ? "-4" : "0"}`
-          : `Neutral MACD adds 0; ${tech.macdHistogramTrend} histogram adds ${tech.macdHistogramTrend === "rising" ? "+4" : tech.macdHistogramTrend === "falling" ? "-4" : "0"}`,
+      `MACD is ${tech.macdBias} and histogram momentum is ${tech.macdHistogramTrend}; the model weighs both signal direction and whether momentum is improving or fading.`,
   });
 
   items.push({
     label: "OBV volume confirmation",
     value:
       tech.obvTrend === "rising"
-        ? `Rising OBV adds +8 because ${periodAdverb} volume is confirming accumulation`
+        ? `Rising OBV means ${periodAdverb} volume is confirming accumulation`
         : tech.obvTrend === "falling"
-          ? `Falling OBV subtracts -8 because ${periodAdverb} volume is confirming distribution`
-          : `${tech.obvTrend} OBV adds 0`,
+          ? `Falling OBV means ${periodAdverb} volume is confirming distribution`
+          : `${tech.obvTrend} OBV is treated as neutral rather than forcing an extreme score`,
   });
 
   items.push({
     label: "Market structure",
     value:
       tech.marketStructure === "higher highs / higher lows"
-        ? `Higher highs and higher lows across recent ${periodPlural} add +12`
+        ? `Higher highs and higher lows across recent ${periodPlural} support an uptrend`
         : tech.marketStructure === "lower highs / lower lows"
-          ? `Lower highs and lower lows across recent ${periodPlural} subtract -12`
+          ? `Lower highs and lower lows across recent ${periodPlural} support a downtrend`
           : tech.marketStructure === "consolidating"
-            ? "Consolidation subtracts -2 until price breaks out"
-            : `${tech.marketStructure} adds 0`,
+            ? "Consolidation is treated as neutral until price breaks out"
+            : `${tech.marketStructure} keeps the structure input near neutral`,
   });
 
   if (
@@ -473,7 +474,8 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
           <p>
             The headline score used across the dashboard is the weighted blend:
             65% weekly ({metric.weeklyScore}) plus 35% daily ({metric.dailyScore}),
-            rounded and capped between 0 and 100.
+            rounded after each timeframe score is calibrated so perfect 100/100
+            and 0/100 readings are intentionally rare.
           </p>
           <div className="score-breakdown-list">
             <div>

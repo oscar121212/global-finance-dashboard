@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { HistoryPoint } from "../types";
 
 type Timeframe = "daily" | "weekly" | "monthly";
@@ -69,6 +69,10 @@ function aggregate(points: ChartPoint[], timeframe: Timeframe): ChartPoint[] {
   return Array.from(map.values()).slice(-100);
 }
 
+function hasEnoughData(points: ChartPoint[], timeframe: Timeframe): boolean {
+  return aggregate(points, timeframe).filter((point) => Number.isFinite(point.value)).length >= 2;
+}
+
 function historyFromValues(values?: number[]): HistoryPoint[] {
   const chartValues = values?.filter((v) => Number.isFinite(v)) ?? [];
   const today = new Date();
@@ -89,6 +93,22 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
     () => addMovingAverages(sourcePoints),
     [sourcePoints],
   );
+  const availableTimeframes = useMemo(
+    () => ({
+      daily: hasEnoughData(sourceWithAverages, "daily"),
+      weekly: hasEnoughData(sourceWithAverages, "weekly"),
+      monthly: hasEnoughData(sourceWithAverages, "monthly"),
+    }),
+    [sourceWithAverages],
+  );
+  useEffect(() => {
+    if (!availableTimeframes[timeframe]) {
+      const next = (["daily", "weekly", "monthly"] as const).find(
+        (option) => availableTimeframes[option],
+      );
+      if (next) setTimeframe(next);
+    }
+  }, [availableTimeframes, timeframe]);
   const pointsByTimeframe = useMemo(
     () => aggregate(sourceWithAverages, timeframe),
     [sourceWithAverages, timeframe],
@@ -194,9 +214,15 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
         {(["daily", "weekly", "monthly"] as const).map((option) => (
           <button
             className={timeframe === option ? "active" : ""}
+            disabled={!availableTimeframes[option]}
             key={option}
             onClick={() => setTimeframe(option)}
             type="button"
+            title={
+              availableTimeframes[option]
+                ? `${option} chart`
+                : `Not enough history for ${option} chart`
+            }
           >
             {option[0]!.toUpperCase() + option.slice(1)}
           </button>

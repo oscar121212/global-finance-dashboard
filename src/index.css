@@ -732,6 +732,16 @@ button {
   color: var(--gold-light);
 }
 
+.chart-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.chart-controls button:disabled:hover {
+  background: transparent;
+  color: var(--muted);
+}
+
 .detail-chart svg {
   display: block;
   width: 100%;

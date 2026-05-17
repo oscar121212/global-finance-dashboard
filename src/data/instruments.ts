@@ -151,13 +151,53 @@ export const INSTRUMENTS: InstrumentConfig[] = [
   },
   {
     id: "asx200",
-    name: "S&P/ASX 200",
+    name: "ASX 200",
     symbol: "^AXJO",
     category: "indices",
     source: "finnhub",
     finnhubSymbol: "^AXJO",
     explanation:
       "Australia's main equity benchmark. It is heavily influenced by banks, miners, iron ore, energy, and domestic rate expectations.",
+  },
+  {
+    id: "nikkei225",
+    name: "Japan Nikkei 225",
+    symbol: "^N225",
+    category: "indices",
+    source: "finnhub",
+    finnhubSymbol: "^N225",
+    explanation:
+      "Japan's major equity benchmark. It tracks exporter sentiment, yen sensitivity, domestic reflation, and global technology/manufacturing cycles.",
+  },
+  {
+    id: "bovespa",
+    name: "Brazil Ibovespa",
+    symbol: "^BVSP",
+    category: "indices",
+    source: "finnhub",
+    finnhubSymbol: "^BVSP",
+    explanation:
+      "Brazil's main equity benchmark. It is sensitive to commodities, EM capital flows, local rates, fiscal risk, and the Brazilian real.",
+  },
+  {
+    id: "tsx",
+    name: "TSX",
+    symbol: "^GSPTSE",
+    category: "indices",
+    source: "finnhub",
+    finnhubSymbol: "^GSPTSE",
+    explanation:
+      "Canada's broad equity benchmark. It has heavy exposure to banks, energy, miners, pipelines, and Canadian rate expectations.",
+  },
+  {
+    id: "ftse100",
+    name: "UK FTSE 100",
+    symbol: "^FTSE",
+    category: "indices",
+    source: "finnhub",
+    finnhubSymbol: "^FTSE",
+    explanation:
+      "The UK's large-cap benchmark. It is globally exposed, commodity-heavy, and sensitive to GBP, energy, banks, and defensive dividend sectors.",
   },
   {
     id: "nifty50",

@@ -269,53 +269,99 @@ export function scoreFromTechnicals(
 ): number {
   const { invert = false, isYield = false, isVix = false } = opts;
   const tech = analyzeTechnicals(closes, invert, history);
-  let score = 50;
 
-  if (tech.vsSma100 === "above") score += 10;
-  if (tech.vsSma100 === "below") score -= 10;
+  const longTermTrend = average([
+    directionalScore(tech.vsSma200, "above", "below", 66, 34),
+    directionalScore(tech.sma200Slope, "rising", "falling", 64, 36),
+  ]);
+  const intermediateTrend = average([
+    directionalScore(tech.vsSma100, "above", "below", 64, 36),
+    directionalScore(tech.sma100Slope, "rising", "falling", 62, 38),
+  ]);
+  const structureScore =
+    tech.marketStructure === "higher highs / higher lows"
+      ? 68
+      : tech.marketStructure === "lower highs / lower lows"
+        ? 32
+        : tech.marketStructure === "consolidating"
+          ? 50
+          : 48;
+  const momentumScore = average([rsiScore(tech.rsi14), macdScore(tech)]);
+  const volumeScore =
+    tech.obvTrend === "rising"
+      ? 60
+      : tech.obvTrend === "falling"
+        ? 40
+        : 50;
+  const dataConfidence = confidenceMultiplier(closes.length, tech.obvTrend);
 
-  if (tech.vsSma200 === "above") score += 10;
-  if (tech.vsSma200 === "below") score -= 10;
+  let score =
+    longTermTrend * 0.24 +
+    intermediateTrend * 0.2 +
+    structureScore * 0.2 +
+    momentumScore * 0.22 +
+    volumeScore * 0.14;
 
-  if (tech.sma100Slope === "rising") score += 8;
-  if (tech.sma100Slope === "falling") score -= 8;
-
-  if (tech.sma200Slope === "rising") score += 8;
-  if (tech.sma200Slope === "falling") score -= 8;
-
-  if (tech.rsi14 >= 55 && tech.rsi14 <= 70) score += 10;
-  if (tech.rsi14 > 70) score -= 4;
-  if (tech.rsi14 < 45 && tech.rsi14 >= 30) score -= 8;
-  if (tech.rsi14 < 30) score += 4;
-
-  if (tech.macdBias === "bullish") score += 10;
-  if (tech.macdBias === "bearish") score -= 10;
-  if (tech.macdHistogramTrend === "rising") score += 4;
-  if (tech.macdHistogramTrend === "falling") score -= 4;
-
-  if (tech.obvTrend === "rising") score += 8;
-  if (tech.obvTrend === "falling") score -= 8;
-
-  if (tech.marketStructure === "higher highs / higher lows") score += 12;
-  if (tech.marketStructure === "lower highs / lower lows") score -= 12;
-  if (tech.marketStructure === "consolidating") score -= 2;
-
-  if (isVix) {
-    score = 100 - score;
-  }
-  if (isYield) {
-    score = 100 - score;
-  }
-  if (invert) {
+  if (isVix || isYield || invert) {
     score = 100 - score;
   }
 
-  return Math.max(0, Math.min(100, Math.round(score)));
+  return calibrateScore(score, dataConfidence);
 }
 
 export function combineTimeframeScores(dailyScore: number, weeklyScore: number): number {
   const blended = weeklyScore * 0.65 + dailyScore * 0.35;
   return Math.max(0, Math.min(100, Math.round(blended)));
+}
+
+function directionalScore<T>(
+  value: T,
+  positive: T,
+  negative: T,
+  positiveScore: number,
+  negativeScore: number,
+): number {
+  if (value === positive) return positiveScore;
+  if (value === negative) return negativeScore;
+  return 50;
+}
+
+function average(values: number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function rsiScore(rsi14: number): number {
+  if (rsi14 >= 50 && rsi14 <= 65) return 62;
+  if (rsi14 > 65 && rsi14 <= 75) return 56;
+  if (rsi14 > 75) return 48;
+  if (rsi14 >= 40 && rsi14 < 50) return 44;
+  if (rsi14 >= 30 && rsi14 < 40) return 38;
+  return 46;
+}
+
+function macdScore(tech: TechnicalSignals): number {
+  const bias =
+    tech.macdBias === "bullish" ? 60 : tech.macdBias === "bearish" ? 40 : 50;
+  const histogram =
+    tech.macdHistogramTrend === "rising"
+      ? 56
+      : tech.macdHistogramTrend === "falling"
+        ? 44
+        : 50;
+
+  return bias * 0.65 + histogram * 0.35;
+}
+
+function confidenceMultiplier(length: number, obvTrend: TechnicalSignals["obvTrend"]): number {
+  const historyConfidence = length >= 260 ? 1 : length >= 120 ? 0.9 : 0.78;
+  const volumeConfidence = obvTrend === "unavailable" ? 0.88 : 1;
+  return historyConfidence * volumeConfidence;
+}
+
+function calibrateScore(rawScore: number, confidence = 1): number {
+  const clamped = Math.max(0, Math.min(100, rawScore));
+  const compressed = 50 + (clamped - 50) * 0.82 * confidence;
+  return Math.max(12, Math.min(88, Math.round(compressed)));
 }
 
 export function buildNarrative(

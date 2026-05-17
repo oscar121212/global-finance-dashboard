@@ -34,8 +34,8 @@ export const RADAR_ITEMS: RadarItem[] = [
     id: "equity-leadership",
     title: "Equity Trend & Leadership",
     why: "He is known for respecting price action and market leadership rather than arguing with the tape.",
-    metricIds: ["spx", "ndx", "dji", "asx200", "nifty50"],
-    chartFocus: "S&P 500, Nasdaq, Dow, ASX 200, Nifty 50",
+    metricIds: ["spx", "ndx", "dji", "asx200", "nikkei225", "bovespa", "tsx", "ftse100", "nifty50"],
+    chartFocus: "S&P 500, Nasdaq, Dow, ASX 200, Japan, Brazil, Canada, FTSE, Nifty 50",
   },
   {
     id: "commodities-cyclicals",
