@@ -59,6 +59,7 @@ export interface MetricResult {
   score: number;
   dailyScore: number;
   weeklyScore: number;
+  monthlyScore: number;
   price?: number;
   changePct?: number;
   closes?: number[];
@@ -66,6 +67,7 @@ export interface MetricResult {
   technical: TechnicalSignals;
   dailyTechnical: TechnicalSignals;
   weeklyTechnical: TechnicalSignals;
+  monthlyTechnical: TechnicalSignals;
   narrative: string;
   updatedAt: string;
   isDemo: boolean;

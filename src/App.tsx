@@ -3,6 +3,7 @@ import CategorySection from "./components/CategorySection";
 import DetailPage, { type AppRoute } from "./components/DetailPage";
 import MacroRadar from "./components/MacroRadar";
 import { loadDashboard } from "./lib/dashboard";
+import { buildMacroInsights, CHEAT_SHEET_PHASES } from "./lib/macroInsights";
 import { hasLiveKeys } from "./lib/marketData";
 import type { DashboardState } from "./types";
 
@@ -75,6 +76,7 @@ export default function App() {
   }, []);
 
   const showApiHint = !hasLiveKeys();
+  const insights = buildMacroInsights(state.categories);
 
   if (state.loading && state.categories.length === 0) {
     return (
@@ -125,8 +127,8 @@ export default function App() {
         <div className="terminal-alert">
           <span>Live macro terminal</span>
           <p>
-            Scores blend 65% weekly trend and 35% daily timing. Extreme 0/100
-            readings are intentionally rare.
+            Scores blend daily, weekly, and monthly ratings equally. Bearish
+            pressure indicators are separated from risk-supportive assets.
           </p>
           <button
             type="button"
@@ -166,9 +168,13 @@ export default function App() {
               A terminal-style read on liquidity, indices, FX, rates, commodities,
               crypto, miners, semiconductors, and central-bank policy.
             </p>
+            <blockquote className="macro-quote">
+              “{insights.summaryQuote}”
+            </blockquote>
             <div className="hero-pills">
-              <span>Weekly weighted</span>
-              <span>Daily timing</span>
+              <span>Daily</span>
+              <span>Weekly</span>
+              <span>Monthly</span>
               <span>RSI</span>
               <span>MACD</span>
               <span>OBV</span>
@@ -200,6 +206,75 @@ export default function App() {
           ))}
         </section>
 
+        <section className="macro-intel-grid" aria-label="Macro intelligence summary">
+          <article className="macro-intel-card">
+            <p className="eyebrow">Ray Dalio-style quadrant</p>
+            <h2>{insights.dalioQuadrant.title}</h2>
+            <p>{insights.dalioQuadrant.description}</p>
+            <div className="quadrant-map">
+              {[
+                "Rising growth / rising inflation",
+                "Rising growth / falling inflation",
+                "Falling growth / rising inflation",
+                "Falling growth / falling inflation",
+              ].map((quadrant) => (
+                <span
+                  className={quadrant === insights.dalioQuadrant.title ? "active" : ""}
+                  key={quadrant}
+                >
+                  {quadrant}
+                </span>
+              ))}
+            </div>
+            <div className="macro-score-pair">
+              <span>Growth proxy <strong>{insights.dalioQuadrant.growthScore}</strong></span>
+              <span>Inflation pressure <strong>{insights.dalioQuadrant.inflationScore}</strong></span>
+            </div>
+          </article>
+
+          <article className="macro-intel-card">
+            <p className="eyebrow">Wall Street cheat-sheet inference</p>
+            <h2>{insights.cheatSheet.phase}</h2>
+            <p>{insights.cheatSheet.description}</p>
+            <div className="phase-strip">
+              {CHEAT_SHEET_PHASES.map((phase) => (
+                <span
+                  className={phase === insights.cheatSheet.phase ? "active" : ""}
+                  key={phase}
+                  title={phase}
+                >
+                  {phase}
+                </span>
+              ))}
+            </div>
+            <div className="macro-score-pair">
+              <span>Psychology score <strong>{insights.cheatSheet.score}</strong></span>
+              <span>Dashboard inference <strong>{scoreLabel(insights.cheatSheet.score)}</strong></span>
+            </div>
+          </article>
+        </section>
+
+        <section className="pressure-panel" aria-label="Bearish pressure indicators">
+          <div>
+            <p className="eyebrow">Bearish pressure tape</p>
+            <h2>Stress Indicators Separated From Bullish Assets</h2>
+            <p>
+              These indicators are visually separated because high readings are usually
+              bearish for global liquidity and risk appetite. Their contribution remains
+              inverted inside the global health score.
+            </p>
+          </div>
+          <div className="pressure-list">
+            {insights.pressureMetrics.slice(0, 8).map(({ metric, pressureScore, reason }) => (
+              <a href={`#/metric/${metric.instrument.id}`} key={metric.instrument.id}>
+                <span>{metric.instrument.name}</span>
+                <small>{reason}</small>
+                <strong>{pressureScore}</strong>
+              </a>
+            ))}
+          </div>
+        </section>
+
         <MacroRadar categories={state.categories} />
 
         {state.categories.map((cat) => (
@@ -207,7 +282,7 @@ export default function App() {
         ))}
 
         <footer className="footer-note">
-          Scores blend 65% weekly trend and 35% daily timing using trend, RSI,
+          Scores blend daily, weekly, and monthly ratings equally using trend, RSI,
           MACD, volume, structure, and position vs 100/200-period averages
           (inverted for VIX, rising yields, and strong USD where appropriate).
           Not financial advice. For education and research only.

@@ -7,11 +7,12 @@ function scoreClass(score: number): string {
 }
 
 export default function MetricCard({ metric }: { metric: MetricResult }) {
-  const { instrument, score, dailyScore, weeklyScore, price, changePct, technical, narrative, isDemo } =
+  const { instrument, score, dailyScore, weeklyScore, monthlyScore, price, changePct, technical, narrative, isDemo } =
     metric;
   const cls = scoreClass(score);
   const dailyCls = scoreClass(dailyScore);
   const weeklyCls = scoreClass(weeklyScore);
+  const monthlyCls = scoreClass(monthlyScore);
 
   return (
     <article className={`card ${cls}`}>
@@ -48,6 +49,14 @@ export default function MetricCard({ metric }: { metric: MetricResult }) {
           >
             <span>{weeklyScore}</span>
             <small>Weekly</small>
+          </a>
+          <a
+            className={`score-ring compact ${monthlyCls}`}
+            href={`#/metric/${instrument.id}`}
+            title="View monthly score breakdown"
+          >
+            <span>{monthlyScore}</span>
+            <small>Monthly</small>
           </a>
         </div>
       </div>

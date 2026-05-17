@@ -202,22 +202,36 @@ function scoreClass(score: number): "strong" | "mid" | "low" {
   return "mid";
 }
 
+type ScoreTimeframe = "daily" | "weekly" | "monthly";
+
 function scoreBreakdown(
   metric: MetricResult,
-  timeframe: "daily" | "weekly",
+  timeframe: ScoreTimeframe,
 ): { label: string; value: string }[] {
-  const tech = timeframe === "daily" ? metric.dailyTechnical : metric.weeklyTechnical;
-  const score = timeframe === "daily" ? metric.dailyScore : metric.weeklyScore;
-  const period = timeframe === "daily" ? "day" : "week";
-  const periodPlural = timeframe === "daily" ? "days" : "weeks";
-  const periodAdverb = timeframe === "daily" ? "daily" : "weekly";
+  const tech =
+    timeframe === "daily"
+      ? metric.dailyTechnical
+      : timeframe === "weekly"
+        ? metric.weeklyTechnical
+        : metric.monthlyTechnical;
+  const score =
+    timeframe === "daily"
+      ? metric.dailyScore
+      : timeframe === "weekly"
+        ? metric.weeklyScore
+        : metric.monthlyScore;
+  const period = timeframe === "daily" ? "day" : timeframe === "weekly" ? "week" : "month";
+  const periodPlural = timeframe === "daily" ? "days" : timeframe === "weekly" ? "weeks" : "months";
+  const periodAdverb = timeframe === "daily" ? "daily" : timeframe === "weekly" ? "weekly" : "monthly";
   const items: { label: string; value: string }[] = [
     {
       label: "Score timeframe",
       value:
         timeframe === "daily"
           ? "Uses the latest daily closes. SMA100/SMA200 are daily moving averages, SMA slopes compare now vs 20 trading days ago, MACD/RSI are daily, OBV checks recent daily volume, and market structure uses roughly the last 60 trading days."
-          : "Uses weekly closes built from the price history. SMA100/SMA200 are 100-week and 200-week moving averages, SMA slopes compare now vs 20 weeks ago, MACD/RSI are weekly, OBV checks weekly volume, and market structure uses roughly the last 60 weeks.",
+          : timeframe === "weekly"
+            ? "Uses weekly closes built from the price history. SMA100/SMA200 are 100-week and 200-week moving averages, SMA slopes compare now vs 20 weeks ago, MACD/RSI are weekly, OBV checks weekly volume, and market structure uses roughly the last 60 weeks."
+            : "Uses monthly closes built from the price history. SMA100/SMA200 are 100-month and 200-month moving averages where available, SMA slopes compare now vs 20 months ago, MACD/RSI are monthly, OBV checks monthly volume, and market structure uses roughly the last 60 months.",
     },
     { label: "Base score", value: "Starts from neutral, then weighs evidence rather than simply adding points." },
     {
@@ -329,7 +343,7 @@ function scoreBreakdown(
   }
 
   items.push({
-    label: `${timeframe === "daily" ? "Daily" : "Weekly"} score`,
+    label: `${timeframe === "daily" ? "Daily" : timeframe === "weekly" ? "Weekly" : "Monthly"} score`,
     value: `${score}/100 (${scoreLabel(score)})`,
   });
 
@@ -399,9 +413,9 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
           <h1>{metric.instrument.name}</h1>
           <p>{metric.instrument.explanation}</p>
           <p>
-            Main score blends the weekly trend and daily timing: 65% weekly and
-            35% daily. Weekly carries more weight for the broader setup, while
-            daily keeps shorter-term moves visible.
+            Main score is an equal blend of the daily, weekly, and monthly
+            technical ratings. This keeps short-term timing, medium-term trend,
+            and longer-term regime in balance.
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -416,6 +430,10 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
           <div className={`detail-score secondary ${scoreClass(metric.weeklyScore)}`}>
             <span>{metric.weeklyScore}</span>
             <small>weekly {scoreLabel(metric.weeklyScore)} / 100</small>
+          </div>
+          <div className={`detail-score secondary ${scoreClass(metric.monthlyScore)}`}>
+            <span>{metric.monthlyScore}</span>
+            <small>monthly {scoreLabel(metric.monthlyScore)} / 100</small>
           </div>
         </div>
       </header>
@@ -461,6 +479,8 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
           <p>{metric.dailyTechnical.summary}</p>
           <h3>Weekly Read</h3>
           <p>{metric.weeklyTechnical.summary}</p>
+          <h3>Monthly Read</h3>
+          <p>{metric.monthlyTechnical.summary}</p>
           <p>{metric.narrative}</p>
           {metric.isDemo && (
             <p className="detail-note">
@@ -472,10 +492,10 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
         <article className="detail-panel" id="score-breakdown">
           <h2>Score Blend</h2>
           <p>
-            The headline score used across the dashboard is the weighted blend:
-            65% weekly ({metric.weeklyScore}) plus 35% daily ({metric.dailyScore}),
-            rounded after each timeframe score is calibrated so perfect 100/100
-            and 0/100 readings are intentionally rare.
+            The headline score used across the dashboard is the equal blend of
+            daily ({metric.dailyScore}), weekly ({metric.weeklyScore}), and
+            monthly ({metric.monthlyScore}) ratings. Each timeframe score is
+            calibrated so perfect 100/100 and 0/100 readings are intentionally rare.
           </p>
           <div className="score-breakdown-list">
             <div>
@@ -483,12 +503,16 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
               <span>{metric.score}/100 ({scoreLabel(metric.score)})</span>
             </div>
             <div>
-              <strong>Weekly score</strong>
-              <span>{metric.weeklyScore}/100, weighted higher to emphasize the broader trend.</span>
+              <strong>Daily score</strong>
+              <span>{metric.dailyScore}/100, the shortest-term timing input.</span>
             </div>
             <div>
-              <strong>Daily score</strong>
-              <span>{metric.dailyScore}/100, used as a shorter-term timing input.</span>
+              <strong>Weekly score</strong>
+              <span>{metric.weeklyScore}/100, the medium-term trend input.</span>
+            </div>
+            <div>
+              <strong>Monthly score</strong>
+              <span>{metric.monthlyScore}/100, the longer-term regime input.</span>
             </div>
           </div>
         </article>
@@ -496,7 +520,7 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
           <h2>Daily Score Breakdown</h2>
           <p>
             This is the shorter-term technical score before blending. It affects
-            35% of the headline score.
+            one third of the headline score.
           </p>
           <div className="score-breakdown-list">
             {scoreBreakdown(metric, "daily").map((item) => (
@@ -516,6 +540,21 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
           <div className="score-breakdown-list">
             {scoreBreakdown(metric, "weekly").map((item) => (
               <div key={`weekly-${item.label}`}>
+                <strong>{item.label}</strong>
+                <span>{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </article>
+        <article className="detail-panel">
+          <h2>Monthly Score Breakdown</h2>
+          <p>
+            This is the longer-term technical score. It uses monthly closes and
+            monthly versions of the same technical framework.
+          </p>
+          <div className="score-breakdown-list">
+            {scoreBreakdown(metric, "monthly").map((item) => (
+              <div key={`monthly-${item.label}`}>
                 <strong>{item.label}</strong>
                 <span>{item.value}</span>
               </div>
@@ -599,7 +638,7 @@ function RadarDetail({
                 {weakest.map((metric) => (
                   <li key={metric.instrument.id}>
                     <a href={`#/metric/${metric.instrument.id}`}>
-                      {metric.instrument.name}: {metric.score}/100 blend (D {metric.dailyScore}, W {metric.weeklyScore})
+                      {metric.instrument.name}: {metric.score}/100 blend (D {metric.dailyScore}, W {metric.weeklyScore}, M {metric.monthlyScore})
                     </a>
                   </li>
                 ))}
@@ -611,7 +650,7 @@ function RadarDetail({
                 {strongest.map((metric) => (
                   <li key={metric.instrument.id}>
                     <a href={`#/metric/${metric.instrument.id}`}>
-                      {metric.instrument.name}: {metric.score}/100 blend (D {metric.dailyScore}, W {metric.weeklyScore})
+                      {metric.instrument.name}: {metric.score}/100 blend (D {metric.dailyScore}, W {metric.weeklyScore}, M {metric.monthlyScore})
                     </a>
                   </li>
                 ))}
@@ -669,8 +708,8 @@ function GlobalScoreDetail({ categories }: { categories: CategorySummary[] }) {
           <p>
             The global score is the average of all instrument scores. This page shows which
             assets are pulling the dashboard higher and which are dragging it lower.
-            Rankings use the blended score, which weights weekly trend at 65% and daily
-            timing at 35%.
+            Rankings use the blended score, which weights daily, weekly, and
+            monthly technical ratings equally.
           </p>
         </div>
         <div className={`detail-score ${scoreClass(globalScore)}`}>

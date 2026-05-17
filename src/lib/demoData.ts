@@ -1,5 +1,5 @@
 import type { HistoryPoint, InstrumentConfig } from "../types";
-import { analyzeTechnicals, aggregateWeeklyHistory, buildNarrative, combineTimeframeScores, scoreFromTechnicals } from "./technicalAnalysis";
+import { analyzeTechnicals, aggregateMonthlyHistory, aggregateWeeklyHistory, buildNarrative, combineTimeframeScores, scoreFromTechnicals } from "./technicalAnalysis";
 import type { MetricResult } from "../types";
 
 function seededRandom(seed: string): () => number {
@@ -49,7 +49,9 @@ export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
     instrument.category === "rates";
 
   const weeklyHistory = aggregateWeeklyHistory(history);
+  const monthlyHistory = aggregateMonthlyHistory(history);
   const weeklyCloses = weeklyHistory.map((point) => point.value);
+  const monthlyCloses = monthlyHistory.map((point) => point.value);
   const dailyScore = scoreFromTechnicals(closes, {
     invert,
     isYield: isYield && instrument.category === "bonds",
@@ -60,9 +62,15 @@ export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
     isYield: isYield && instrument.category === "bonds",
     isVix,
   }, weeklyHistory);
-  const score = combineTimeframeScores(dailyScore, weeklyScore);
+  const monthlyScore = scoreFromTechnicals(monthlyCloses, {
+    invert,
+    isYield: isYield && instrument.category === "bonds",
+    isVix,
+  }, monthlyHistory);
+  const score = combineTimeframeScores(dailyScore, weeklyScore, monthlyScore);
   const dailyTechnical = analyzeTechnicals(closes, invert, history);
   const weeklyTechnical = analyzeTechnicals(weeklyCloses, invert, weeklyHistory);
+  const monthlyTechnical = analyzeTechnicals(monthlyCloses, invert, monthlyHistory);
   const price = closes[closes.length - 1]!;
   const prev = closes[closes.length - 2] ?? price;
   const changePct = ((price - prev) / prev) * 100;
@@ -72,6 +80,7 @@ export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
     score,
     dailyScore,
     weeklyScore,
+    monthlyScore,
     price,
     changePct,
     closes,
@@ -79,6 +88,7 @@ export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
     technical: dailyTechnical,
     dailyTechnical,
     weeklyTechnical,
+    monthlyTechnical,
     narrative: buildNarrative(instrument.name, score, dailyTechnical, changePct),
     updatedAt: new Date().toISOString(),
     isDemo: true,

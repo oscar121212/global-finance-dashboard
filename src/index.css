@@ -261,6 +261,16 @@ button {
   font-weight: 700;
 }
 
+.macro-quote {
+  margin: 0.9rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--gold);
+  border-radius: 8px;
+  background: rgba(201, 162, 39, 0.08);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
 .score-hero__list {
   display: grid;
   gap: 0.4rem;
@@ -358,6 +368,163 @@ button {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--gold), var(--gold-light));
+}
+
+.macro-intel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.macro-intel-card,
+.pressure-panel {
+  border: 1px solid rgba(139, 156, 179, 0.14);
+  border-radius: 14px;
+  background: rgba(18, 26, 36, 0.76);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.22);
+}
+
+.macro-intel-card {
+  padding: 1rem;
+}
+
+.macro-intel-card .eyebrow,
+.pressure-panel .eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--gold-light);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.macro-intel-card h2,
+.pressure-panel h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.macro-intel-card p,
+.pressure-panel p {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.quadrant-map {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.quadrant-map span {
+  min-height: 74px;
+  display: grid;
+  place-items: center;
+  padding: 0.65rem;
+  border: 1px solid rgba(139, 156, 179, 0.16);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
+  background: rgba(5, 8, 13, 0.45);
+}
+
+.quadrant-map span.active,
+.phase-strip span.active {
+  border-color: rgba(232, 197, 71, 0.85);
+  color: var(--gold-light);
+  background: rgba(201, 162, 39, 0.14);
+  box-shadow: 0 0 0 1px rgba(232, 197, 71, 0.16);
+}
+
+.macro-score-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.macro-score-pair span {
+  padding: 0.38rem 0.55rem;
+  border: 1px solid rgba(139, 156, 179, 0.13);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  background: rgba(5, 8, 13, 0.4);
+}
+
+.macro-score-pair strong {
+  color: var(--text);
+}
+
+.phase-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.28rem;
+  margin-top: 0.9rem;
+}
+
+.phase-strip span {
+  overflow: hidden;
+  padding: 0.42rem 0.35rem;
+  border: 1px solid rgba(139, 156, 179, 0.14);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 0.65rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(5, 8, 13, 0.45);
+}
+
+.pressure-panel {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(280px, 1.3fr);
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+  padding: 1rem;
+}
+
+.pressure-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.pressure-list a {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.1rem 0.75rem;
+  padding: 0.65rem;
+  border: 1px solid rgba(240, 113, 120, 0.22);
+  border-radius: 10px;
+  background: rgba(240, 113, 120, 0.06);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.pressure-list a:hover {
+  border-color: rgba(240, 113, 120, 0.55);
+}
+
+.pressure-list span {
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.pressure-list small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.pressure-list strong {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--red);
+  font-size: 1.2rem;
 }
 
 .header {
@@ -1357,6 +1524,11 @@ button {
     grid-column: 1 / -1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .macro-intel-grid,
+  .pressure-panel {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1396,6 +1568,16 @@ button {
 
   .score-hero__list {
     grid-template-columns: 1fr;
+  }
+
+  .macro-intel-grid,
+  .pressure-panel,
+  .pressure-list {
+    grid-template-columns: 1fr;
+  }
+
+  .phase-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .detail-hero {

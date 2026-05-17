@@ -2,6 +2,7 @@ import type { HistoryPoint, InstrumentConfig, MetricResult } from "../types";
 import { buildDemoMetric } from "./demoData";
 import {
   analyzeTechnicals,
+  aggregateMonthlyHistory,
   aggregateWeeklyHistory,
   buildNarrative,
   combineTimeframeScores,
@@ -425,12 +426,16 @@ export async function fetchMetric(
     (instrument.category === "rates" && instrument.id !== "fed");
 
   const weeklyHistory = aggregateWeeklyHistory(history);
+  const monthlyHistory = aggregateMonthlyHistory(history);
   const weeklyCloses = weeklyHistory.map((point) => point.value);
+  const monthlyCloses = monthlyHistory.map((point) => point.value);
   const dailyScore = scoreFromTechnicals(closes, { invert, isYield, isVix }, history);
   const weeklyScore = scoreFromTechnicals(weeklyCloses, { invert, isYield, isVix }, weeklyHistory);
-  const score = combineTimeframeScores(dailyScore, weeklyScore);
+  const monthlyScore = scoreFromTechnicals(monthlyCloses, { invert, isYield, isVix }, monthlyHistory);
+  const score = combineTimeframeScores(dailyScore, weeklyScore, monthlyScore);
   const dailyTechnical = analyzeTechnicals(closes, invert, history);
   const weeklyTechnical = analyzeTechnicals(weeklyCloses, invert, weeklyHistory);
+  const monthlyTechnical = analyzeTechnicals(monthlyCloses, invert, monthlyHistory);
 
   if (price === undefined) price = closes[closes.length - 1];
   if (changePct === undefined && closes.length > 1) {
@@ -444,6 +449,7 @@ export async function fetchMetric(
     score,
     dailyScore,
     weeklyScore,
+    monthlyScore,
     price,
     changePct,
     closes,
@@ -451,6 +457,7 @@ export async function fetchMetric(
     technical: dailyTechnical,
     dailyTechnical,
     weeklyTechnical,
+    monthlyTechnical,
     narrative: buildNarrative(
       instrument.name,
       score,

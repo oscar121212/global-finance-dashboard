@@ -27,6 +27,23 @@ export function aggregateWeeklyHistory(history: HistoryPoint[]): HistoryPoint[] 
   return Array.from(byWeek.values());
 }
 
+export function aggregateMonthlyHistory(history: HistoryPoint[]): HistoryPoint[] {
+  const byMonth = new Map<string, HistoryPoint>();
+
+  for (const point of [...history].sort((a, b) => a.date.localeCompare(b.date))) {
+    const key = point.date.slice(0, 7);
+    const existing = byMonth.get(key);
+
+    byMonth.set(key, {
+      date: point.date,
+      value: point.value,
+      volume: (existing?.volume ?? 0) + (point.volume ?? 0),
+    });
+  }
+
+  return Array.from(byMonth.values());
+}
+
 export function rsi(closes: number[], period = 14): number {
   if (closes.length < period + 1) return 50;
   let gains = 0;
@@ -269,99 +286,172 @@ export function scoreFromTechnicals(
 ): number {
   const { invert = false, isYield = false, isVix = false } = opts;
   const tech = analyzeTechnicals(closes, invert, history);
-
-  const longTermTrend = average([
-    directionalScore(tech.vsSma200, "above", "below", 66, 34),
-    directionalScore(tech.sma200Slope, "rising", "falling", 64, 36),
-  ]);
-  const intermediateTrend = average([
-    directionalScore(tech.vsSma100, "above", "below", 64, 36),
-    directionalScore(tech.sma100Slope, "rising", "falling", 62, 38),
-  ]);
-  const structureScore =
-    tech.marketStructure === "higher highs / higher lows"
-      ? 68
-      : tech.marketStructure === "lower highs / lower lows"
-        ? 32
-        : tech.marketStructure === "consolidating"
-          ? 50
-          : 48;
-  const momentumScore = average([rsiScore(tech.rsi14), macdScore(tech)]);
-  const volumeScore =
-    tech.obvTrend === "rising"
-      ? 60
-      : tech.obvTrend === "falling"
-        ? 40
-        : 50;
+  const s100 = sma(closes, 100);
+  const s200 = sma(closes, 200);
+  const last = closes[closes.length - 1] ?? 0;
+  const volatility = realizedVolatility(closes, 40);
   const dataConfidence = confidenceMultiplier(closes.length, tech.obvTrend);
 
-  let score =
-    longTermTrend * 0.24 +
-    intermediateTrend * 0.2 +
-    structureScore * 0.2 +
-    momentumScore * 0.22 +
-    volumeScore * 0.14;
+  const longTermTrend = average([
+    normalizedDistance(last, s200, volatility),
+    normalizedSlope(closes, 200, 20, volatility),
+  ]);
+  const intermediateTrend = average([
+    normalizedDistance(last, s100, volatility),
+    normalizedSlope(closes, 100, 20, volatility),
+  ]);
+  const structureSignal = structureEdge(tech.marketStructure);
+  const momentumSignal = average([
+    rsiEdge(tech.rsi14),
+    macdEdge(tech, last, volatility),
+    percentChangeEdge(closes, 20, volatility),
+  ]);
+  const volumeSignal = obvEdge(tech.obvTrend);
+  const persistenceSignal = average([
+    percentChangeEdge(closes, 60, volatility),
+    percentChangeEdge(closes, 120, volatility),
+  ]);
+
+  let edge =
+    longTermTrend * 0.26 +
+    intermediateTrend * 0.18 +
+    structureSignal * 0.19 +
+    momentumSignal * 0.22 +
+    volumeSignal * 0.08 +
+    persistenceSignal * 0.07;
 
   if (isVix || isYield || invert) {
-    score = 100 - score;
+    edge *= -1;
   }
 
-  return calibrateScore(score, dataConfidence);
+  return calibrateEdge(edge, dataConfidence);
 }
 
-export function combineTimeframeScores(dailyScore: number, weeklyScore: number): number {
-  const blended = weeklyScore * 0.65 + dailyScore * 0.35;
-  return Math.max(0, Math.min(100, Math.round(blended)));
-}
-
-function directionalScore<T>(
-  value: T,
-  positive: T,
-  negative: T,
-  positiveScore: number,
-  negativeScore: number,
+export function combineTimeframeScores(
+  dailyScore: number,
+  weeklyScore: number,
+  monthlyScore: number,
 ): number {
-  if (value === positive) return positiveScore;
-  if (value === negative) return negativeScore;
-  return 50;
+  const blended = (dailyScore + weeklyScore + monthlyScore) / 3;
+  return Math.max(0, Math.min(100, Math.round(blended)));
 }
 
 function average(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-function rsiScore(rsi14: number): number {
-  if (rsi14 >= 50 && rsi14 <= 65) return 62;
-  if (rsi14 > 65 && rsi14 <= 75) return 56;
-  if (rsi14 > 75) return 48;
-  if (rsi14 >= 40 && rsi14 < 50) return 44;
-  if (rsi14 >= 30 && rsi14 < 40) return 38;
-  return 46;
-}
-
-function macdScore(tech: TechnicalSignals): number {
-  const bias =
-    tech.macdBias === "bullish" ? 60 : tech.macdBias === "bearish" ? 40 : 50;
-  const histogram =
-    tech.macdHistogramTrend === "rising"
-      ? 56
-      : tech.macdHistogramTrend === "falling"
-        ? 44
-        : 50;
-
-  return bias * 0.65 + histogram * 0.35;
-}
-
 function confidenceMultiplier(length: number, obvTrend: TechnicalSignals["obvTrend"]): number {
-  const historyConfidence = length >= 260 ? 1 : length >= 120 ? 0.9 : 0.78;
-  const volumeConfidence = obvTrend === "unavailable" ? 0.88 : 1;
+  const historyConfidence = length >= 260 ? 1 : length >= 120 ? 0.94 : 0.84;
+  const volumeConfidence = obvTrend === "unavailable" ? 0.94 : 1;
   return historyConfidence * volumeConfidence;
 }
 
-function calibrateScore(rawScore: number, confidence = 1): number {
-  const clamped = Math.max(0, Math.min(100, rawScore));
-  const compressed = 50 + (clamped - 50) * 0.82 * confidence;
-  return Math.max(12, Math.min(88, Math.round(compressed)));
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function realizedVolatility(closes: number[], period: number): number {
+  if (closes.length < 3) return 0.03;
+  const returns: number[] = [];
+  const slice = closes.slice(-period - 1);
+
+  for (let i = 1; i < slice.length; i++) {
+    const previous = slice[i - 1]!;
+    const current = slice[i]!;
+    if (previous) returns.push((current - previous) / previous);
+  }
+
+  if (returns.length === 0) return 0.03;
+  const mean = returns.reduce((sum, value) => sum + value, 0) / returns.length;
+  const variance =
+    returns.reduce((sum, value) => sum + (value - mean) ** 2, 0) / returns.length;
+  return clamp(Math.sqrt(variance), 0.006, 0.12);
+}
+
+function normalizedDistance(
+  current: number,
+  averageValue: number | null,
+  volatility: number,
+): number {
+  if (!averageValue || !current) return 0;
+  const distance = (current - averageValue) / averageValue;
+  return clamp(distance / (volatility * 5), -1, 1);
+}
+
+function normalizedSlope(
+  closes: number[],
+  period: number,
+  lookback: number,
+  volatility: number,
+): number {
+  if (closes.length < period + lookback) return 0;
+  const current = sma(closes, period);
+  const prior = sma(closes.slice(0, -lookback), period);
+  if (!current || !prior) return 0;
+  const move = (current - prior) / prior;
+  return clamp(move / (volatility * Math.sqrt(lookback) * 1.4), -1, 1);
+}
+
+function percentChangeEdge(
+  closes: number[],
+  lookback: number,
+  volatility: number,
+): number {
+  if (closes.length <= lookback) return 0;
+  const last = closes[closes.length - 1]!;
+  const prior = closes[closes.length - 1 - lookback]!;
+  if (!prior) return 0;
+  const move = (last - prior) / prior;
+  return clamp(move / (volatility * Math.sqrt(lookback) * 1.15), -1, 1);
+}
+
+function structureEdge(structure: TechnicalSignals["marketStructure"]): number {
+  if (structure === "higher highs / higher lows") return 0.82;
+  if (structure === "lower highs / lower lows") return -0.82;
+  if (structure === "consolidating") return 0;
+  return -0.08;
+}
+
+function rsiEdge(rsi14: number): number {
+  if (rsi14 >= 45 && rsi14 <= 65) return clamp((rsi14 - 50) / 15, -0.35, 0.75);
+  if (rsi14 > 65 && rsi14 <= 75) return 0.35;
+  if (rsi14 > 75) return -0.12;
+  if (rsi14 >= 30 && rsi14 < 45) return clamp((rsi14 - 45) / 18, -0.8, 0);
+  return 0.12;
+}
+
+function macdEdge(
+  tech: TechnicalSignals,
+  current: number,
+  volatility: number,
+): number {
+  if (!current) return 0;
+  const histogramStrength = clamp(
+    tech.macdHistogram / (Math.abs(current) * volatility * 2.5),
+    -1,
+    1,
+  );
+  const bias = tech.macdBias === "bullish" ? 0.45 : tech.macdBias === "bearish" ? -0.45 : 0;
+  const momentum =
+    tech.macdHistogramTrend === "rising"
+      ? 0.22
+      : tech.macdHistogramTrend === "falling"
+        ? -0.22
+        : 0;
+
+  return clamp(histogramStrength * 0.5 + bias + momentum, -1, 1);
+}
+
+function obvEdge(obvTrendValue: TechnicalSignals["obvTrend"]): number {
+  if (obvTrendValue === "rising") return 0.55;
+  if (obvTrendValue === "falling") return -0.55;
+  return 0;
+}
+
+function calibrateEdge(edge: number, confidence = 1): number {
+  const boundedEdge = clamp(edge * confidence, -1.2, 1.2);
+  const score = 50 + 42 * Math.tanh(boundedEdge * 1.35);
+  return Math.max(7, Math.min(93, Math.round(score)));
 }
 
 export function buildNarrative(
