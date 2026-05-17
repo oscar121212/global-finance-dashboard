@@ -2,7 +2,9 @@ import type { HistoryPoint, InstrumentConfig, MetricResult } from "../types";
 import { buildDemoMetric } from "./demoData";
 import {
   analyzeTechnicals,
+  aggregateWeeklyHistory,
   buildNarrative,
+  combineTimeframeScores,
   scoreFromTechnicals,
 } from "./technicalAnalysis";
 
@@ -410,8 +412,13 @@ export async function fetchMetric(
     instrument.id === "global-liq" ||
     (instrument.category === "rates" && instrument.id !== "fed");
 
-  const score = scoreFromTechnicals(closes, { invert, isYield, isVix }, history);
-  const technical = analyzeTechnicals(closes, invert, history);
+  const weeklyHistory = aggregateWeeklyHistory(history);
+  const weeklyCloses = weeklyHistory.map((point) => point.value);
+  const dailyScore = scoreFromTechnicals(closes, { invert, isYield, isVix }, history);
+  const weeklyScore = scoreFromTechnicals(weeklyCloses, { invert, isYield, isVix }, weeklyHistory);
+  const score = combineTimeframeScores(dailyScore, weeklyScore);
+  const dailyTechnical = analyzeTechnicals(closes, invert, history);
+  const weeklyTechnical = analyzeTechnicals(weeklyCloses, invert, weeklyHistory);
 
   if (price === undefined) price = closes[closes.length - 1];
   if (changePct === undefined && closes.length > 1) {
@@ -423,15 +430,19 @@ export async function fetchMetric(
   return {
     instrument,
     score,
+    dailyScore,
+    weeklyScore,
     price,
     changePct,
     closes,
     history,
-    technical,
+    technical: dailyTechnical,
+    dailyTechnical,
+    weeklyTechnical,
     narrative: buildNarrative(
       instrument.name,
       score,
-      technical,
+      dailyTechnical,
       changePct,
     ),
     updatedAt: new Date().toISOString(),

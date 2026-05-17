@@ -202,45 +202,70 @@ function scoreClass(score: number): "strong" | "mid" | "low" {
   return "mid";
 }
 
-function scoreBreakdown(metric: MetricResult): { label: string; value: string }[] {
-  const tech = metric.technical;
+function scoreBreakdown(
+  metric: MetricResult,
+  timeframe: "daily" | "weekly",
+): { label: string; value: string }[] {
+  const tech = timeframe === "daily" ? metric.dailyTechnical : metric.weeklyTechnical;
+  const score = timeframe === "daily" ? metric.dailyScore : metric.weeklyScore;
+  const period = timeframe === "daily" ? "day" : "week";
+  const periodPlural = timeframe === "daily" ? "days" : "weeks";
+  const periodAdverb = timeframe === "daily" ? "daily" : "weekly";
   const items: { label: string; value: string }[] = [
+    {
+      label: "Score timeframe",
+      value:
+        timeframe === "daily"
+          ? "Uses the latest daily closes. SMA100/SMA200 are daily moving averages, SMA slopes compare now vs 20 trading days ago, MACD/RSI are daily, OBV checks recent daily volume, and market structure uses roughly the last 60 trading days."
+          : "Uses weekly closes built from the price history. SMA100/SMA200 are 100-week and 200-week moving averages, SMA slopes compare now vs 20 weeks ago, MACD/RSI are weekly, OBV checks weekly volume, and market structure uses roughly the last 60 weeks.",
+    },
     { label: "Base score", value: "Starts at 50/100" },
     {
-      label: "Price vs 100-day SMA",
+      label: "Chart trend",
+      value:
+        tech.chartTrend === "trending higher"
+          ? "Trending higher: price action and/or moving averages show an upward chart trend"
+          : tech.chartTrend === "trending lower"
+            ? "Trending lower: price action and/or moving averages show a downward chart trend"
+            : tech.chartTrend === "consolidating"
+              ? "Consolidating: price is moving sideways in a relatively tight range"
+              : "Mixed: the signals do not agree strongly enough to call a clean trend",
+    },
+    {
+      label: `Price vs 100-${period} SMA`,
       value:
         tech.vsSma100 === "above"
-          ? "Price above SMA100 adds +10"
+          ? `Price above 100-${period} SMA adds +10`
           : tech.vsSma100 === "below"
-            ? "Price below SMA100 subtracts -10"
-            : "Price near SMA100 adds 0",
+            ? `Price below 100-${period} SMA subtracts -10`
+            : `Price near 100-${period} SMA adds 0`,
     },
     {
-      label: "Price vs 200-day SMA",
+      label: `Price vs 200-${period} SMA`,
       value:
         tech.vsSma200 === "above"
-          ? "Price above SMA200 adds +10"
+          ? `Price above 200-${period} SMA adds +10`
           : tech.vsSma200 === "below"
-            ? "Price below SMA200 subtracts -10"
-            : "Price near SMA200 adds 0",
+            ? `Price below 200-${period} SMA subtracts -10`
+            : `Price near 200-${period} SMA adds 0`,
     },
     {
-      label: "100-day SMA slope",
+      label: `100-${period} SMA slope`,
       value:
         tech.sma100Slope === "rising"
-          ? "Rising SMA100 adds +8"
+          ? `Rising 100-${period} SMA adds +8`
           : tech.sma100Slope === "falling"
-            ? "Falling SMA100 subtracts -8"
-            : `${tech.sma100Slope} SMA100 adds 0`,
+            ? `Falling 100-${period} SMA subtracts -8`
+            : `${tech.sma100Slope} 100-${period} SMA adds 0`,
     },
     {
-      label: "200-day SMA slope",
+      label: `200-${period} SMA slope`,
       value:
         tech.sma200Slope === "rising"
-          ? "Rising SMA200 adds +8"
+          ? `Rising 200-${period} SMA adds +8`
           : tech.sma200Slope === "falling"
-            ? "Falling SMA200 subtracts -8"
-            : `${tech.sma200Slope} SMA200 adds 0`,
+            ? `Falling 200-${period} SMA subtracts -8`
+            : `${tech.sma200Slope} 200-${period} SMA adds 0`,
     },
   ];
 
@@ -270,9 +295,9 @@ function scoreBreakdown(metric: MetricResult): { label: string; value: string }[
     label: "OBV volume confirmation",
     value:
       tech.obvTrend === "rising"
-        ? "Rising OBV adds +8 because volume is confirming accumulation"
+        ? `Rising OBV adds +8 because ${periodAdverb} volume is confirming accumulation`
         : tech.obvTrend === "falling"
-          ? "Falling OBV subtracts -8 because volume is confirming distribution"
+          ? `Falling OBV subtracts -8 because ${periodAdverb} volume is confirming distribution`
           : `${tech.obvTrend} OBV adds 0`,
   });
 
@@ -280,9 +305,9 @@ function scoreBreakdown(metric: MetricResult): { label: string; value: string }[
     label: "Market structure",
     value:
       tech.marketStructure === "higher highs / higher lows"
-        ? "Higher highs and higher lows add +12"
+        ? `Higher highs and higher lows across recent ${periodPlural} add +12`
         : tech.marketStructure === "lower highs / lower lows"
-          ? "Lower highs and lower lows subtract -12"
+          ? `Lower highs and lower lows across recent ${periodPlural} subtract -12`
           : tech.marketStructure === "consolidating"
             ? "Consolidation subtracts -2 until price breaks out"
             : `${tech.marketStructure} adds 0`,
@@ -303,8 +328,8 @@ function scoreBreakdown(metric: MetricResult): { label: string; value: string }[
   }
 
   items.push({
-    label: "Final score",
-    value: `${metric.score}/100 (${scoreLabel(metric.score)})`,
+    label: `${timeframe === "daily" ? "Daily" : "Weekly"} score`,
+    value: `${score}/100 (${scoreLabel(score)})`,
   });
 
   return items;
@@ -372,10 +397,25 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
           <p className="detail-eyebrow">{metric.instrument.category}</p>
           <h1>{metric.instrument.name}</h1>
           <p>{metric.instrument.explanation}</p>
+          <p>
+            Main score blends the weekly trend and daily timing: 65% weekly and
+            35% daily. Weekly carries more weight for the broader setup, while
+            daily keeps shorter-term moves visible.
+          </p>
         </div>
-        <div className={`detail-score ${scoreClass(metric.score)}`}>
-          <span>{metric.score}</span>
-          <small>{scoreLabel(metric.score)} / 100</small>
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div className={`detail-score primary ${scoreClass(metric.score)}`}>
+            <span>{metric.score}</span>
+            <small>{scoreLabel(metric.score)} blend / 100</small>
+          </div>
+          <div className={`detail-score secondary ${scoreClass(metric.dailyScore)}`}>
+            <span>{metric.dailyScore}</span>
+            <small>daily {scoreLabel(metric.dailyScore)} / 100</small>
+          </div>
+          <div className={`detail-score secondary ${scoreClass(metric.weeklyScore)}`}>
+            <span>{metric.weeklyScore}</span>
+            <small>weekly {scoreLabel(metric.weeklyScore)} / 100</small>
+          </div>
         </div>
       </header>
 
@@ -416,7 +456,10 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
         </article>
         <article className="detail-panel">
           <h2>Technical Read</h2>
-          <p>{metric.technical.summary}</p>
+          <h3>Daily Read</h3>
+          <p>{metric.dailyTechnical.summary}</p>
+          <h3>Weekly Read</h3>
+          <p>{metric.weeklyTechnical.summary}</p>
           <p>{metric.narrative}</p>
           {metric.isDemo && (
             <p className="detail-note">
@@ -426,14 +469,51 @@ function MetricDetail({ metric }: { metric: MetricResult }) {
           )}
         </article>
         <article className="detail-panel" id="score-breakdown">
-          <h2>Score Breakdown</h2>
+          <h2>Score Blend</h2>
           <p>
-            This is the scoring recipe behind the ranking out of 100 for this
-            metric.
+            The headline score used across the dashboard is the weighted blend:
+            65% weekly ({metric.weeklyScore}) plus 35% daily ({metric.dailyScore}),
+            rounded and capped between 0 and 100.
           </p>
           <div className="score-breakdown-list">
-            {scoreBreakdown(metric).map((item) => (
-              <div key={item.label}>
+            <div>
+              <strong>Main score</strong>
+              <span>{metric.score}/100 ({scoreLabel(metric.score)})</span>
+            </div>
+            <div>
+              <strong>Weekly score</strong>
+              <span>{metric.weeklyScore}/100, weighted higher to emphasize the broader trend.</span>
+            </div>
+            <div>
+              <strong>Daily score</strong>
+              <span>{metric.dailyScore}/100, used as a shorter-term timing input.</span>
+            </div>
+          </div>
+        </article>
+        <article className="detail-panel">
+          <h2>Daily Score Breakdown</h2>
+          <p>
+            This is the shorter-term technical score before blending. It affects
+            35% of the headline score.
+          </p>
+          <div className="score-breakdown-list">
+            {scoreBreakdown(metric, "daily").map((item) => (
+              <div key={`daily-${item.label}`}>
+                <strong>{item.label}</strong>
+                <span>{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </article>
+        <article className="detail-panel">
+          <h2>Weekly Score Breakdown</h2>
+          <p>
+            This is the weekly scoring recipe. It uses weekly closes and
+            weekly versions of the same technical framework.
+          </p>
+          <div className="score-breakdown-list">
+            {scoreBreakdown(metric, "weekly").map((item) => (
+              <div key={`weekly-${item.label}`}>
                 <strong>{item.label}</strong>
                 <span>{item.value}</span>
               </div>
@@ -517,7 +597,7 @@ function RadarDetail({
                 {weakest.map((metric) => (
                   <li key={metric.instrument.id}>
                     <a href={`#/metric/${metric.instrument.id}`}>
-                      {metric.instrument.name}: {metric.score}/100
+                      {metric.instrument.name}: {metric.score}/100 blend (D {metric.dailyScore}, W {metric.weeklyScore})
                     </a>
                   </li>
                 ))}
@@ -529,7 +609,7 @@ function RadarDetail({
                 {strongest.map((metric) => (
                   <li key={metric.instrument.id}>
                     <a href={`#/metric/${metric.instrument.id}`}>
-                      {metric.instrument.name}: {metric.score}/100
+                      {metric.instrument.name}: {metric.score}/100 blend (D {metric.dailyScore}, W {metric.weeklyScore})
                     </a>
                   </li>
                 ))}
@@ -554,7 +634,7 @@ function RadarDetail({
             {metrics.map((metric) => (
               <a href={`#/metric/${metric.instrument.id}`} key={metric.instrument.id}>
                 <span>{metric.instrument.name}</span>
-                <strong>{metric.score}/100</strong>
+                <strong>{metric.score}/100 blend</strong>
               </a>
             ))}
           </div>
@@ -587,6 +667,8 @@ function GlobalScoreDetail({ categories }: { categories: CategorySummary[] }) {
           <p>
             The global score is the average of all instrument scores. This page shows which
             assets are pulling the dashboard higher and which are dragging it lower.
+            Rankings use the blended score, which weights weekly trend at 65% and daily
+            timing at 35%.
           </p>
         </div>
         <div className={`detail-score ${scoreClass(globalScore)}`}>

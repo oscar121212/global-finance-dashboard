@@ -254,6 +254,13 @@ button {
   color: var(--gold-light);
 }
 
+.score-stack {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 .score-ring {
   flex-shrink: 0;
   width: 52px;
@@ -267,6 +274,29 @@ button {
   border: 3px solid var(--gold);
   color: var(--text);
   text-decoration: none;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.score-ring.primary {
+  width: 58px;
+  height: 58px;
+  font-size: 1.08rem;
+}
+
+.score-ring.compact {
+  width: 44px;
+  height: 44px;
+  border-width: 2px;
+  font-size: 0.86rem;
+}
+
+.score-ring small {
+  margin-top: 0.2rem;
+  font-size: 0.52rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .score-ring.strong {
@@ -566,6 +596,16 @@ button {
   text-decoration: none;
 }
 
+.detail-score.primary {
+  min-width: 124px;
+  min-height: 104px;
+}
+
+.detail-score.secondary {
+  min-width: 94px;
+  min-height: 82px;
+}
+
 .detail-score.strong {
   border-color: var(--green);
   box-shadow: 0 0 0 1px rgba(61, 214, 140, 0.25);
@@ -586,6 +626,10 @@ button {
   font-size: 2.4rem;
   font-weight: 700;
   line-height: 1;
+}
+
+.detail-score.secondary span {
+  font-size: 1.8rem;
 }
 
 .detail-score small {

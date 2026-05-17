@@ -146,9 +146,10 @@ export default function App() {
       ))}
 
       <footer className="footer-note">
-        Scores combine trend, RSI, and position vs 20/50-day averages (inverted
-        for VIX, rising yields, and strong USD where appropriate). Not financial
-        advice. For education and research only.
+        Scores blend 65% weekly trend and 35% daily timing using trend, RSI,
+        MACD, volume, structure, and position vs 100/200-period averages
+        (inverted for VIX, rising yields, and strong USD where appropriate).
+        Not financial advice. For education and research only.
       </footer>
     </div>
   );

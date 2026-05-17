@@ -38,6 +38,7 @@ export interface TechnicalSignals {
   macdBias: "bullish" | "bearish" | "neutral";
   macdHistogramTrend: "rising" | "falling" | "flat";
   obvTrend: "rising" | "falling" | "flat" | "unavailable";
+  chartTrend: "trending higher" | "trending lower" | "consolidating" | "mixed";
   marketStructure:
     | "higher highs / higher lows"
     | "lower highs / lower lows"
@@ -56,11 +57,15 @@ export interface HistoryPoint {
 export interface MetricResult {
   instrument: InstrumentConfig;
   score: number;
+  dailyScore: number;
+  weeklyScore: number;
   price?: number;
   changePct?: number;
   closes?: number[];
   history?: HistoryPoint[];
   technical: TechnicalSignals;
+  dailyTechnical: TechnicalSignals;
+  weeklyTechnical: TechnicalSignals;
   narrative: string;
   updatedAt: string;
   isDemo: boolean;

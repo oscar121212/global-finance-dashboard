@@ -7,9 +7,11 @@ function scoreClass(score: number): string {
 }
 
 export default function MetricCard({ metric }: { metric: MetricResult }) {
-  const { instrument, score, price, changePct, technical, narrative, isDemo } =
+  const { instrument, score, dailyScore, weeklyScore, price, changePct, technical, narrative, isDemo } =
     metric;
   const cls = scoreClass(score);
+  const dailyCls = scoreClass(dailyScore);
+  const weeklyCls = scoreClass(weeklyScore);
 
   return (
     <article className={`card ${cls}`}>
@@ -22,13 +24,32 @@ export default function MetricCard({ metric }: { metric: MetricResult }) {
           </h3>
           <span className="symbol">{instrument.symbol}</span>
         </div>
-        <a
-          className={`score-ring ${cls}`}
-          href={`#/metric/${instrument.id}`}
-          title="View score breakdown"
-        >
-          {score}
-        </a>
+        <div className="score-stack">
+          <a
+            className={`score-ring primary ${cls}`}
+            href={`#/metric/${instrument.id}`}
+            title="View blended score breakdown"
+          >
+            <span>{score}</span>
+            <small>Blend</small>
+          </a>
+          <a
+            className={`score-ring compact ${dailyCls}`}
+            href={`#/metric/${instrument.id}`}
+            title="View daily score breakdown"
+          >
+            <span>{dailyScore}</span>
+            <small>Daily</small>
+          </a>
+          <a
+            className={`score-ring compact ${weeklyCls}`}
+            href={`#/metric/${instrument.id}`}
+            title="View weekly score breakdown"
+          >
+            <span>{weeklyScore}</span>
+            <small>Weekly</small>
+          </a>
+        </div>
       </div>
 
       <p className="explain">{instrument.explanation}</p>
@@ -53,9 +74,9 @@ export default function MetricCard({ metric }: { metric: MetricResult }) {
       )}
 
       <p className="ta">
-        <strong>Technical:</strong> RSI {technical.rsi14.toFixed(1)} · MACD{" "}
-        {technical.macdBias} · vs SMA200 {technical.vsSma200} · structure{" "}
-        {technical.marketStructure}
+        <strong>Daily technical:</strong> {technical.chartTrend} · RSI{" "}
+        {technical.rsi14.toFixed(1)} · MACD {technical.macdBias} · volume{" "}
+        {technical.obvTrend}
       </p>
 
       <p className="ta" style={{ marginTop: "-0.25rem" }}>

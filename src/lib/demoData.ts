@@ -1,5 +1,5 @@
 import type { HistoryPoint, InstrumentConfig } from "../types";
-import { analyzeTechnicals, buildNarrative, scoreFromTechnicals } from "./technicalAnalysis";
+import { analyzeTechnicals, aggregateWeeklyHistory, buildNarrative, combineTimeframeScores, scoreFromTechnicals } from "./technicalAnalysis";
 import type { MetricResult } from "../types";
 
 function seededRandom(seed: string): () => number {
@@ -48,12 +48,21 @@ export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
     instrument.id === "global-liq" ||
     instrument.category === "rates";
 
-  const score = scoreFromTechnicals(closes, {
+  const weeklyHistory = aggregateWeeklyHistory(history);
+  const weeklyCloses = weeklyHistory.map((point) => point.value);
+  const dailyScore = scoreFromTechnicals(closes, {
     invert,
     isYield: isYield && instrument.category === "bonds",
     isVix,
   }, history);
-  const technical = analyzeTechnicals(closes, invert, history);
+  const weeklyScore = scoreFromTechnicals(weeklyCloses, {
+    invert,
+    isYield: isYield && instrument.category === "bonds",
+    isVix,
+  }, weeklyHistory);
+  const score = combineTimeframeScores(dailyScore, weeklyScore);
+  const dailyTechnical = analyzeTechnicals(closes, invert, history);
+  const weeklyTechnical = analyzeTechnicals(weeklyCloses, invert, weeklyHistory);
   const price = closes[closes.length - 1]!;
   const prev = closes[closes.length - 2] ?? price;
   const changePct = ((price - prev) / prev) * 100;
@@ -61,12 +70,16 @@ export function buildDemoMetric(instrument: InstrumentConfig): MetricResult {
   return {
     instrument,
     score,
+    dailyScore,
+    weeklyScore,
     price,
     changePct,
     closes,
     history,
-    technical,
-    narrative: buildNarrative(instrument.name, score, technical, changePct),
+    technical: dailyTechnical,
+    dailyTechnical,
+    weeklyTechnical,
+    narrative: buildNarrative(instrument.name, score, dailyTechnical, changePct),
     updatedAt: new Date().toISOString(),
     isDemo: true,
   };

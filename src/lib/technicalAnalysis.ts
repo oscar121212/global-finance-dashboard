@@ -6,6 +6,27 @@ export function sma(values: number[], period: number): number | null {
   return slice.reduce((a, b) => a + b, 0) / period;
 }
 
+export function aggregateWeeklyHistory(history: HistoryPoint[]): HistoryPoint[] {
+  const byWeek = new Map<string, HistoryPoint>();
+
+  for (const point of [...history].sort((a, b) => a.date.localeCompare(b.date))) {
+    const date = new Date(`${point.date}T00:00:00Z`);
+    const day = date.getUTCDay();
+    const diffToMonday = (day + 6) % 7;
+    date.setUTCDate(date.getUTCDate() - diffToMonday);
+    const key = date.toISOString().slice(0, 10);
+    const existing = byWeek.get(key);
+
+    byWeek.set(key, {
+      date: point.date,
+      value: point.value,
+      volume: (existing?.volume ?? 0) + (point.volume ?? 0),
+    });
+  }
+
+  return Array.from(byWeek.values());
+}
+
 export function rsi(closes: number[], period = 14): number {
   if (closes.length < period + 1) return 50;
   let gains = 0;
@@ -140,6 +161,38 @@ function marketStructure(closes: number[]): TechnicalSignals["marketStructure"] 
   return "mixed structure";
 }
 
+function chartTrend(
+  structure: TechnicalSignals["marketStructure"],
+  vsSma100: TechnicalSignals["vsSma100"],
+  vsSma200: TechnicalSignals["vsSma200"],
+  sma100Slope: TechnicalSignals["sma100Slope"],
+  sma200Slope: TechnicalSignals["sma200Slope"],
+): TechnicalSignals["chartTrend"] {
+  if (structure === "higher highs / higher lows") return "trending higher";
+  if (structure === "lower highs / lower lows") return "trending lower";
+  if (structure === "consolidating") return "consolidating";
+
+  if (
+    vsSma100 === "above" &&
+    vsSma200 === "above" &&
+    sma100Slope === "rising" &&
+    sma200Slope !== "falling"
+  ) {
+    return "trending higher";
+  }
+
+  if (
+    vsSma100 === "below" &&
+    vsSma200 === "below" &&
+    sma100Slope === "falling" &&
+    sma200Slope !== "rising"
+  ) {
+    return "trending lower";
+  }
+
+  return "mixed";
+}
+
 function cmp(a: number, b: number, tolerance = 0.002): "above" | "below" | "at" {
   const pct = Math.abs(a - b) / (b || 1);
   if (pct < tolerance) return "at";
@@ -163,6 +216,7 @@ export function analyzeTechnicals(
   const vsSma200 = s200 ? cmp(last, s200) : "at";
   const sma100Slope = slope(closes, 100);
   const sma200Slope = slope(closes, 200);
+  const trend = chartTrend(structure, vsSma100, vsSma200, sma100Slope, sma200Slope);
   const macdBias: TechnicalSignals["macdBias"] =
     Math.abs(macdResult.histogram) < Math.abs(last || 1) * 0.0005
       ? "neutral"
@@ -183,7 +237,7 @@ export function analyzeTechnicals(
     `Price is ${vsSma100} the 100-day average and ${vsSma200} the 200-day average.`,
     `SMA slopes are ${sma100Slope} for the 100-day and ${sma200Slope} for the 200-day.`,
     `RSI(14) is ${rsi14.toFixed(1)} (${rsiLabel}); MACD is ${macdBias} with ${macdHistogramTrend} histogram momentum.`,
-    `OBV is ${obv}; market structure is ${structure}.`,
+    `Chart trend is ${trend}; OBV is ${obv}; market structure is ${structure}.`,
     invertScore ? "Higher readings in this metric imply tighter conditions." : "",
   ]
     .filter(Boolean)
@@ -201,6 +255,7 @@ export function analyzeTechnicals(
     macdBias,
     macdHistogramTrend,
     obvTrend: obv,
+    chartTrend: trend,
     marketStructure: structure,
     summary,
   };
@@ -256,6 +311,11 @@ export function scoreFromTechnicals(
   }
 
   return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+export function combineTimeframeScores(dailyScore: number, weeklyScore: number): number {
+  const blended = weeklyScore * 0.65 + dailyScore * 0.35;
+  return Math.max(0, Math.min(100, Math.round(blended)));
 }
 
 export function buildNarrative(
