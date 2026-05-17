@@ -10,6 +10,11 @@ type LineChartProps = {
   yAxisLabel: string;
 };
 
+type ChartPoint = HistoryPoint & {
+  sma100?: number;
+  sma200?: number;
+};
+
 function formatValue(value: number): string {
   if (Math.abs(value) >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
   if (Math.abs(value) >= 10) return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -20,7 +25,6 @@ function formatDate(date: string): string {
   const parsed = new Date(`${date}T00:00:00Z`);
   if (Number.isNaN(parsed.getTime())) return date;
   return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
     month: "2-digit",
     year: "numeric",
     timeZone: "UTC",
@@ -34,10 +38,28 @@ function weekKey(date: string): string {
   return parsed.toISOString().slice(0, 10);
 }
 
-function aggregate(points: HistoryPoint[], timeframe: Timeframe): HistoryPoint[] {
+function addMovingAverages(points: HistoryPoint[]): ChartPoint[] {
+  return points.map((point, index) => {
+    const withAverage: ChartPoint = { ...point };
+
+    if (index >= 99) {
+      const slice = points.slice(index - 99, index + 1);
+      withAverage.sma100 = slice.reduce((sum, p) => sum + p.value, 0) / 100;
+    }
+
+    if (index >= 199) {
+      const slice = points.slice(index - 199, index + 1);
+      withAverage.sma200 = slice.reduce((sum, p) => sum + p.value, 0) / 200;
+    }
+
+    return withAverage;
+  });
+}
+
+function aggregate(points: ChartPoint[], timeframe: Timeframe): ChartPoint[] {
   if (timeframe === "daily") return points.slice(-100);
 
-  const map = new Map<string, HistoryPoint>();
+  const map = new Map<string, ChartPoint>();
   for (const point of points) {
     const key =
       timeframe === "weekly" ? weekKey(point.date) : point.date.slice(0, 7);
@@ -63,9 +85,13 @@ function historyFromValues(values?: number[]): HistoryPoint[] {
 export default function LineChart({ values, history, title, yAxisLabel }: LineChartProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>("daily");
   const sourcePoints = history?.length ? history : historyFromValues(values);
+  const sourceWithAverages = useMemo(
+    () => addMovingAverages(sourcePoints),
+    [sourcePoints],
+  );
   const pointsByTimeframe = useMemo(
-    () => aggregate(sourcePoints, timeframe),
-    [sourcePoints, timeframe],
+    () => aggregate(sourceWithAverages, timeframe),
+    [sourceWithAverages, timeframe],
   );
   const chartPoints = pointsByTimeframe.filter((point) =>
     Number.isFinite(point.value),
@@ -86,9 +112,33 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
   const rightPad = 22;
   const topPad = 24;
   const bottomPad = 48;
-  const min = Math.min(...chartValues);
-  const max = Math.max(...chartValues);
+  const averageValues = chartPoints.flatMap((point) =>
+    [point.sma100, point.sma200].filter((v): v is number =>
+      Number.isFinite(v),
+    ),
+  );
+  const plottedValues = [...chartValues, ...averageValues];
+  const min = Math.min(...plottedValues);
+  const max = Math.max(...plottedValues);
   const range = max - min || 1;
+
+  const xForIndex = (index: number) =>
+    leftPad +
+    (index / (chartPoints.length - 1)) * (width - leftPad - rightPad);
+  const yForValue = (value: number) =>
+    height -
+    bottomPad -
+    ((value - min) / range) * (height - topPad - bottomPad);
+
+  const polylineFrom = (selector: (point: ChartPoint) => number | undefined) =>
+    chartPoints
+      .map((point, index) => {
+        const value = selector(point);
+        if (value === undefined || !Number.isFinite(value)) return null;
+        return `${xForIndex(index).toFixed(1)},${yForValue(value).toFixed(1)}`;
+      })
+      .filter((point): point is string => Boolean(point))
+      .join(" ");
 
   const polylinePoints = chartPoints
     .map((point, index) => {
@@ -102,6 +152,8 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
+  const sma100Points = polylineFrom((point) => point.sma100);
+  const sma200Points = polylineFrom((point) => point.sma200);
 
   const first = chartValues[0]!;
   const last = chartValues[chartValues.length - 1]!;
@@ -165,27 +217,19 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
         >
           {formatValue(min)}
         </text>
-        <line
-          x1={leftPad}
-          x2={width - rightPad}
-          y1={topPad}
-          y2={topPad}
-          className="chart-grid"
-        />
-        <line
-          x1={leftPad}
-          x2={width - rightPad}
-          y1={height / 2}
-          y2={height / 2}
-          className="chart-grid"
-        />
-        <line
-          x1={leftPad}
-          x2={width - rightPad}
-          y1={height - bottomPad}
-          y2={height - bottomPad}
-          className="chart-grid"
-        />
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+          const y = topPad + ratio * (height - topPad - bottomPad);
+          return (
+            <line
+              className="chart-grid"
+              key={ratio}
+              x1={leftPad}
+              x2={width - rightPad}
+              y1={y}
+              y2={y}
+            />
+          );
+        })}
         <line
           x1={leftPad}
           x2={leftPad}
@@ -201,6 +245,12 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
           className="chart-axis"
         />
         <polyline className="chart-line" points={polylinePoints} />
+        {sma100Points && (
+          <polyline className="chart-line sma100" points={sma100Points} />
+        )}
+        {sma200Points && (
+          <polyline className="chart-line sma200" points={sma200Points} />
+        )}
         <text
           className="chart-tick"
           x={leftPad}
@@ -226,6 +276,11 @@ export default function LineChart({ values, history, title, yAxisLabel }: LineCh
           {formatDate(lastDate)}
         </text>
       </svg>
+      <div className="chart-legend" aria-label="Chart legend">
+        <span><i className="price" /> Price</span>
+        {sma100Points && <span><i className="sma100" /> 100-day SMA</span>}
+        {sma200Points && <span><i className="sma200" /> 200-day SMA</span>}
+      </div>
     </div>
   );
 }

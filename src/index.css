@@ -670,6 +670,50 @@ button {
   stroke-width: 3;
 }
 
+.chart-line.sma100 {
+  stroke: #3dd68c;
+  stroke-width: 2;
+}
+
+.chart-line.sma200 {
+  stroke: #8ab4ff;
+  stroke-width: 2;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 0.65rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.chart-legend i {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.chart-legend i.price {
+  background: var(--gold-light);
+}
+
+.chart-legend i.sma100 {
+  background: #3dd68c;
+}
+
+.chart-legend i.sma200 {
+  background: #8ab4ff;
+}
+
 .chart-empty {
   margin-bottom: 1rem;
   padding: 2rem;
