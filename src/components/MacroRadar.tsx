@@ -13,8 +13,8 @@ export const RADAR_ITEMS: RadarItem[] = [
     id: "liquidity-fed",
     title: "Liquidity & The Fed",
     why: "Druckenmiller often emphasizes that liquidity and central-bank policy can dominate fundamentals at major turning points.",
-    metricIds: ["m2", "global-liq", "fed"],
-    chartFocus: "M2, broad liquidity, Fed funds",
+    metricIds: ["m2", "china-m2", "japan-m2", "euro-m2", "global-liq", "fed"],
+    chartFocus: "US/China/Japan/Euro M2, broad liquidity, Fed funds",
   },
   {
     id: "rates-yields",

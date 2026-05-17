@@ -15,20 +15,25 @@ type MetricInterpretation = {
 };
 
 const SPECIFIC_INTERPRETATIONS: Record<string, MetricInterpretation> = {
-  m1: {
-    why: "M1 is the narrowest money supply measure, so it captures the most liquid money available for spending or immediate use. It can move sharply when households, banks, or companies shift between cash-like balances and other assets.",
-    up: "Rising M1 usually means more immediately spendable money is available. That can support short-term demand and risk appetite, although very fast growth may also point to inflation pressure or emergency liquidity creation.",
-    down: "Falling M1 usually points to tighter immediate liquidity. For global finance that can mean less fuel for speculation, weaker demand, and more pressure on highly valued or highly leveraged assets.",
-  },
   m2: {
     why: "M2 is a broader liquidity gauge than M1 because it includes savings deposits and money-market style balances. Many macro investors watch it because broad money growth often lines up with major risk-asset cycles.",
     up: "Rising M2 generally means easier liquidity. That tends to be supportive for equities, credit, commodities, crypto, and emerging markets if inflation and rates are not also rising too fast.",
     down: "Falling or stagnant M2 usually means liquidity is being drained. That can pressure equity valuations, reduce speculative activity, and make refinancing harder for weaker borrowers.",
   },
-  m3: {
-    why: "Official US M3 is discontinued, so this dashboard uses broad money as a practical proxy. The purpose is to capture whether the overall pool of money available to the economy is expanding or contracting.",
-    up: "Rising broad money usually means looser financial conditions and more cash available to circulate through markets and the economy.",
-    down: "Falling broad money usually means tighter conditions, less balance-sheet expansion, and a more difficult environment for speculative assets.",
+  "china-m2": {
+    why: "China M2 is important because Chinese credit growth has historically been a major driver of construction, property activity, industrial demand, and commodity cycles.",
+    up: "Rising China M2 usually means easier Chinese liquidity and stronger potential support for copper, iron ore, energy demand, Asian equities, and global cyclicals.",
+    down: "Falling or weak China M2 usually points to tighter Chinese credit conditions. That can pressure commodities, miners, Asian growth sentiment, and companies exposed to China demand.",
+  },
+  "japan-m2": {
+    why: "Japan M2 helps describe yen-system liquidity. Japan is important globally because low Japanese rates and abundant liquidity often support carry trades and international capital flows.",
+    up: "Rising Japan M2 can support domestic liquidity and global carry appetite, especially when Japanese rates stay low.",
+    down: "Falling or weak Japan M2 can mean less domestic liquidity and may reduce support for yen-funded carry trades.",
+  },
+  "euro-m2": {
+    why: "Euro Area M2 helps show whether eurozone money and bank deposits are expanding or contracting. It is useful because Europe is bank-credit heavy.",
+    up: "Rising Euro M2 usually points to easier eurozone liquidity and can support European equities, credit, and global risk appetite.",
+    down: "Falling Euro M2 usually points to tighter eurozone bank liquidity and credit conditions, which can pressure growth and risk assets.",
   },
   "global-liq": {
     why: "Global liquidity is hard to measure in one clean series, so the dashboard uses dollar strength as a proxy. A weaker dollar often behaves like easier global liquidity because offshore borrowers and commodity buyers face less pressure.",
@@ -189,7 +194,13 @@ function getYAxisLabel(metric: MetricResult): string {
   if (metric.instrument.category === "bonds" || metric.instrument.category === "rates") return "% yield / policy rate";
   if (metric.instrument.category === "fx") return `${symbol} exchange rate`;
   if (metric.instrument.category === "crypto") return "US$";
-  if (metric.instrument.category === "liquidity") return id === "global-liq" ? "DXY proxy" : "US$ billions";
+  if (metric.instrument.category === "liquidity") {
+    if (id === "global-liq") return "DXY proxy";
+    if (id === "china-m2") return "Chinese yuan";
+    if (id === "japan-m2") return "Japanese yen";
+    if (id === "euro-m2") return "Euro";
+    return "US$ billions";
+  }
   if (metric.instrument.category === "indices") return "Index points";
   if (metric.instrument.category === "tech" || metric.instrument.category === "mining") return "Share price (US$ / proxy)";
   if (metric.instrument.category === "volatility") return id === "vix" ? "VIX index" : "Index level";

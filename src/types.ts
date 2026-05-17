@@ -21,6 +21,7 @@ export interface InstrumentConfig {
   fredSeriesId?: string;
   coingeckoId?: string;
   finnhubSymbol?: string;
+  yahooSymbol?: string;
   explanation: string;
 }
 

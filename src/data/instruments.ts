@@ -5,9 +5,9 @@ export const CATEGORY_META: Record<
   { title: string; description: string }
 > = {
   liquidity: {
-    title: "Global & US Liquidity",
+    title: "Global Money Supply & Liquidity",
     description:
-      "Money supply measures how much cash and near-cash exists in the system. Rising liquidity often supports risk assets; contraction can tighten financial conditions.",
+      "Money supply measures how much cash and near-cash exists in major currency systems. Rising broad money often supports risk assets; contraction can tighten financial conditions.",
   },
   indices: {
     title: "Major Equity Indices",
@@ -58,16 +58,6 @@ export const CATEGORY_META: Record<
 
 export const INSTRUMENTS: InstrumentConfig[] = [
   {
-    id: "m1",
-    name: "US M1 Money Stock",
-    symbol: "M1SL",
-    category: "liquidity",
-    source: "fred",
-    fredSeriesId: "M1SL",
-    explanation:
-      "M1 is the narrowest US money measure: currency plus demand deposits. Fast-moving; spikes can reflect flight to cash.",
-  },
-  {
     id: "m2",
     name: "US M2 Money Stock",
     symbol: "M2SL",
@@ -78,14 +68,34 @@ export const INSTRUMENTS: InstrumentConfig[] = [
       "M2 adds savings deposits and retail money funds to M1. Markets often watch M2 growth for liquidity cycles.",
   },
   {
-    id: "m3",
-    name: "US M3 (Discontinued proxy: M2+)",
-    symbol: "MABMM301USM189S",
+    id: "china-m2",
+    name: "Chinese Yuan M2 Money Stock",
+    symbol: "CNY M2",
     category: "liquidity",
     source: "fred",
-    fredSeriesId: "M2SL",
+    fredSeriesId: "MYAGM2CNM189N",
     explanation:
-      "Official M3 reporting ended in 2006; we score broad liquidity using M2 trend as the practical US aggregate proxy.",
+      "China M2 measures broad money in Chinese yuan. It is a key gauge for Chinese credit creation, property-cycle liquidity, and global commodity demand.",
+  },
+  {
+    id: "japan-m2",
+    name: "Japanese Yen M2 Money Stock",
+    symbol: "JPY M2",
+    category: "liquidity",
+    source: "fred",
+    fredSeriesId: "MYAGM2JPM189S",
+    explanation:
+      "Japan M2 measures broad money in Japanese yen. It helps track domestic liquidity, bank deposits, and the monetary backdrop behind yen carry trades.",
+  },
+  {
+    id: "euro-m2",
+    name: "Euro Area M2 Money Stock",
+    symbol: "EUR M2",
+    category: "liquidity",
+    source: "fred",
+    fredSeriesId: "MYAGM2EZM196N",
+    explanation:
+      "Euro Area M2 measures broad money in euros. It is useful for reading eurozone credit conditions, bank liquidity, and the ECB policy backdrop.",
   },
   {
     id: "global-liq",
@@ -430,6 +440,7 @@ export const INSTRUMENTS: InstrumentConfig[] = [
     category: "crypto",
     source: "coingecko",
     coingeckoId: "bitcoin",
+    yahooSymbol: "BTC-USD",
     explanation: "Digital store-of-value narrative; macro liquidity and risk-on indicator.",
   },
   {
@@ -439,6 +450,7 @@ export const INSTRUMENTS: InstrumentConfig[] = [
     category: "crypto",
     source: "coingecko",
     coingeckoId: "ethereum",
+    yahooSymbol: "ETH-USD",
     explanation: "Smart-contract platform; DeFi and Web3 activity gauge.",
   },
   {
@@ -448,6 +460,7 @@ export const INSTRUMENTS: InstrumentConfig[] = [
     category: "crypto",
     source: "coingecko",
     coingeckoId: "solana",
+    yahooSymbol: "SOL-USD",
     explanation: "High-throughput L1; retail and NFT speculation sentiment.",
   },
   {
@@ -465,8 +478,8 @@ export const INSTRUMENTS: InstrumentConfig[] = [
     symbol: "RBATARGET",
     category: "rates",
     source: "fred",
-    fredSeriesId: "RBACTR",
-    explanation: "RBA policy rate influences AUD, mortgages, and bank stocks.",
+    fredSeriesId: "IRSTCI01AUM156N",
+    explanation: "Australia overnight interbank/call rate proxy for RBA cash-rate conditions. It influences AUD, mortgages, and bank stocks.",
   },
   {
     id: "rbnz",
@@ -474,8 +487,8 @@ export const INSTRUMENTS: InstrumentConfig[] = [
     symbol: "NZOCR",
     category: "rates",
     source: "fred",
-    fredSeriesId: "INTGSTNZL",
-    explanation: "RBNZ official cash rate path affects NZD and domestic lending.",
+    fredSeriesId: "IRSTCI01NZM156N",
+    explanation: "New Zealand overnight interbank/call rate proxy for RBNZ cash-rate conditions. It affects NZD and domestic lending.",
   },
   {
     id: "ecb",

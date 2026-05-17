@@ -210,11 +210,11 @@ async function fredSeries(seriesId: string): Promise<HistoryPoint[] | null> {
   const url = isDev
     ? `/api/fred/series/observations?series_id=${seriesId}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=1300`
     : `/api/fred-observations?series_id=${seriesId}&limit=1300`;
-  if (isDev && !FRED_KEY) return null;
+  if (isDev && !FRED_KEY) return fredPublicSeries(seriesId);
   const data = await fetchJson<{
     observations: { date: string; value: string }[];
   }>(url);
-  if (!data?.observations?.length) return null;
+  if (!data?.observations?.length) return fredPublicSeries(seriesId);
   const vals = data.observations
     .map((o) => ({
       date: o.date,
@@ -222,6 +222,25 @@ async function fredSeries(seriesId: string): Promise<HistoryPoint[] | null> {
     }))
     .filter((point) => !Number.isNaN(point.value))
     .reverse();
+  return vals.length >= MIN_CLOSES ? vals : fredPublicSeries(seriesId);
+}
+
+async function fredPublicSeries(seriesId: string): Promise<HistoryPoint[] | null> {
+  if (isDev) return null;
+
+  const data = await fetchJson<{
+    observations: { date: string; value: string }[];
+  }>(`/api/fred-public?series_id=${seriesId}`);
+
+  if (!data?.observations?.length) return null;
+
+  const vals = data.observations
+    .map((o) => ({
+      date: o.date,
+      value: parseFloat(o.value),
+    }))
+    .filter((point) => !Number.isNaN(point.value));
+
   return vals.length >= MIN_CLOSES ? vals : null;
 }
 
@@ -265,6 +284,9 @@ export async function fetchMetric(
       }
     } else if (instrument.source === "coingecko" && instrument.coingeckoId) {
       history = await coingeckoHistory(instrument.coingeckoId);
+      if ((!history || history.length < MIN_CLOSES) && instrument.yahooSymbol) {
+        history = await yahooHistoryForSymbol(instrument.yahooSymbol);
+      }
       if (history?.length) {
         const last = history[history.length - 1]?.value;
         const prev = history[history.length - 2]?.value;
