@@ -176,6 +176,16 @@ function scoreLabel(score: number): string {
   return "mixed";
 }
 
+function explainConditionScore(score: number): string {
+  if (score <= 35) {
+    return `A score of ${score} is a Warning because the average of the underlying indicators is weak. In practical terms, the group is showing poor trend, weak momentum, or conditions that tighten global finance.`;
+  }
+  if (score >= 65) {
+    return `A score of ${score} is Supportive because the average of the underlying indicators is strong. In practical terms, the group is showing positive trend, firm momentum, or conditions that ease global finance.`;
+  }
+  return `A score of ${score} is Mixed because the underlying indicators are not giving a clear one-sided signal. Some parts are supportive while others are warning or neutral.`;
+}
+
 function formatLevel(value?: number): string {
   if (value === undefined) return "n/a";
   if (Math.abs(value) >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -308,6 +318,8 @@ function RadarDetail({
       ? 50
       : Math.round(metrics.reduce((sum, metric) => sum + metric.score, 0) / metrics.length);
   const primary = metrics[0];
+  const weakest = [...metrics].sort((a, b) => a.score - b.score).slice(0, 3);
+  const strongest = [...metrics].sort((a, b) => b.score - a.score).slice(0, 3);
 
   return (
     <main className="detail-page">
@@ -336,6 +348,40 @@ function RadarDetail({
       )}
 
       <section className="detail-grid">
+        <article className="detail-panel">
+          <h2>Why This Score?</h2>
+          <p>{explainConditionScore(score)}</p>
+          <p>
+            The score is calculated as the average of:{" "}
+            <strong>{metrics.map((metric) => metric.instrument.name).join(", ")}</strong>.
+          </p>
+          <div className="score-reason-grid">
+            <div>
+              <h3>Weakest contributors</h3>
+              <ul>
+                {weakest.map((metric) => (
+                  <li key={metric.instrument.id}>
+                    <a href={`#/metric/${metric.instrument.id}`}>
+                      {metric.instrument.name}: {metric.score}/100
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3>Strongest contributors</h3>
+              <ul>
+                {strongest.map((metric) => (
+                  <li key={metric.instrument.id}>
+                    <a href={`#/metric/${metric.instrument.id}`}>
+                      {metric.instrument.name}: {metric.score}/100
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </article>
         <article className="detail-panel">
           <h2>Why It Matters</h2>
           <p>

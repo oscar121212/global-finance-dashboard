@@ -755,6 +755,36 @@ button {
   color: var(--gold-light);
 }
 
+.score-reason-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.85rem;
+}
+
+.score-reason-grid h3 {
+  margin-bottom: 0.45rem;
+}
+
+.score-reason-grid ul {
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--muted);
+}
+
+.score-reason-grid li {
+  margin-bottom: 0.35rem;
+}
+
+.score-reason-grid a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.score-reason-grid a:hover {
+  color: var(--gold-light);
+}
+
 .score-columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
